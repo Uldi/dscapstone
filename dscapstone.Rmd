@@ -1,0 +1,232 @@
+---
+title: "DS Capstone"
+author: "David"
+date: "22 4 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Setup
+Load needed Libraries
+```{r load libraries}
+library(tm)
+library(SnowballC)
+library(RWeka)
+library(dplyr)
+source("loaddata.R")
+source("corpusFunctions.R")
+source("prediction.R")
+```
+
+## Load Data
+```{r load data}
+#c <- loadSampleCorpus()
+c <- loadFullCorpus()
+```
+
+## Preprocessing
+### Stemming
+```{r Stemming}
+c <- tm_map(c, FUN = stemDocument)
+```
+Note: Should I really do stemming? Depends what I want to predict, stemmed or orginal words...
+
+### Profane Filtering
+I decided to use a list of profanity words found on github. It seems to be a former Google list. 
+https://github.com/RobertJGabriel/Google-profanity-words/blob/master/list.txt
+```{r Profane Filtering}
+c <- filterProfanityWords(c)
+```
+
+### Remove White Space, to lower
+```{r Remove White Space and to lower}
+c <- tm_map(c, FUN = stripWhitespace)
+c <- tm_map(c, FUN = content_transformer(tolower))
+```
+
+### Remove Punctuation
+```{r Remove Punctuation}
+c <- tm_map(c, FUN = removePunctuation, preserve_intra_word_contractions = TRUE, preserve_intra_word_dashes = TRUE)
+```
+
+### Remove Numbers
+```{r Remove Numbers}
+c <- tm_map(c, FUN = removeNumbers)
+```
+
+
+## Data Exploration
+### Questions to consider
+
+- Some words are more frequent than others - what are the distributions of word frequencies?
+- hat are the frequencies of 2-grams and 3-grams in the dataset?
+- How many unique words do you need in a frequency sorted dictionary to cover 50% of all word instances in the language? 90%?
+- How do you evaluate how many of the words come from foreign languages?
+- Can you think of a way to increase the coverage -- identifying words that may not be in the corpora or using a smaller number of words in the dictionary to cover the same number of phrases?
+
+### Document Term Matrix
+```{r, eval=FALSE}
+dtm <- DocumentTermMatrix(c)
+dtm
+findFreqTerms(dtm, 100, Inf)
+
+tdm <- TermDocumentMatrix(c)
+tdm
+findFreqTerms(tdm, 100, Inf)
+```
+
+#### Merge content to documents 
+```{r merge content}
+cm <- VCorpus(VectorSource(c(c[[1]]$content, c[[2]]$content, c[[3]]$content)))
+```
+
+#### Some data exploration
+```{r, eval=FALSE}
+tdm <- TermDocumentMatrix(cm)
+findFreqTerms(tdm, 200, Inf)
+findAssocs(tdm, "twitter", 0.1)
+```
+
+#### Reducing sparse terms
+```{r, eval=FALSE}
+redTdm <- removeSparseTerms(tdm, 0.98)
+redTdm
+```
+
+#### HClustering
+```{r, eval=FALSE}
+redHClust <- hclust(dist(redTdm), method = "ward.D")
+plot(redHClust)
+```
+
+#### K Means Clustering
+```{r, eval=FALSE}
+redKMeans <- kmeans(redTdm, 10)
+summary(redKMeans)
+```
+Note: Not sure what to do with this...
+
+### n-grams
+#### generate TermDocumentMatrix
+```{r generate TermDocumentMatrix}
+tdm1 <- getTermDocMatrix(cm, 1)
+tdm2 <- getTermDocMatrix(cm, 2)
+tdm3 <- getTermDocMatrix(cm, 3)
+tdm4 <- getTermDocMatrix(cm, 4)
+```
+#### list most frequent terms
+```{r list most frequent terms}
+listMostFrequentTerms(tdm1, 20, ngram=1)
+listMostFrequentTerms(tdm2, 20, ngram=2)
+listMostFrequentTerms(tdm3, 20, ngram=3)
+listMostFrequentTerms(tdm4, 20, minFreq=10, ngram=4)
+```
+
+#### plotmost frequent terms
+```{r plotmost frequent terms}
+par(mfrow = c(2, 2))
+analyseFrequentTerms(tdm1, 10, ngram=1)
+analyseFrequentTerms(tdm2, 10, ngram=2)
+analyseFrequentTerms(tdm3, 10, ngram=3)
+analyseFrequentTerms(tdm4, 10, minFreq=10, ngram=4)
+```
+
+#### top 100 frequent terms
+```{r top 100 frequent terms}
+par(mfrow = c(2, 2))
+plotTopFrequentTerms(tdm1, ngram=1)
+plotTopFrequentTerms(tdm2, ngram=2)
+plotTopFrequentTerms(tdm3, ngram=3)
+plotTopFrequentTerms(tdm4, ngram=4)
+```
+
+### Language Coverage
+How many unique words do you need in a frequency sorted dictionary to cover 50% of all word instances in the language? 90%?
+
+<span style="color:red">**tbd**</span>
+
+### Foreign Words
+How do you evaluate how many of the words come from foreign languages?
+
+We can use the either the library cld2 or textcat to detect the language. But applying this to onle single words results in many NA --> the library is not able to detect the language.
+```{r, eval=FALSE}
+#the terms to evaluate
+t <- tdm1$dimnames$Terms
+
+#example with textcat
+library(textcat)
+langs <- textcat(t)
+numEnglish <- length(grep("english", langs))
+numEnglish
+sum(is.na(langs))
+
+#example with cld2
+library(cld2)
+langs <- cld2::detect_language(t)
+numEnglish <- length(grep("en", langs))
+numEnglish
+sum(is.na(langs))
+```
+Both libraries detect around 4000 words out of the over 50000. The library cld2 is factors faster than textcat.
+
+Maybe it's better to apply the language detection to the text elements (lines)
+```{r, eval=FALSE}
+t <- cm
+
+#example with textcat
+library(textcat)
+langs <- textcat(t)
+numEnglish <- length(grep("english", langs))
+numEnglish
+sum(is.na(langs))
+```
+
+### Increase Coverage
+Can you think of a way to increase the coverage -- identifying words that may not be in the corpora or using a smaller number of words in the dictionary to cover the same number of phrases?
+
+- increase coverage: use an english dictionary
+- add further texts
+- use only the most frequent n-grams
+
+<span style="color:red">**tbd**</span>
+
+
+## Prediction
+### Ideas 
+- use only terms with a minimum frequency of ?? 
+- 0 words --> propose 1-grams with highest frequency
+- 1 word --> propose second word of 2-grams with highest frequency matching the first word
+- 2 words --> propose third word of 3-grams with highest frequency matching the first two words
+- 3 words --> propose forth word of 4-grams with highest frequency matching the first three words
+- while typing... always evaluate the last 1 to 2 words to make the better proposal...
+- for prediction I need to concat the ngrams. Question: what about whitespace?
+- what about stemming? do I need to use startsWith?
+
+- from Wikipedia (https://en.wikipedia.org/wiki/N-gram): because of the open nature of language, it is common to group words unknown to the language model together.
+
+- In practice, the probability distributions are smoothed by **assigning non-zero probabilities to unseen words or n-grams**; see smoothing techniques (https://en.wikipedia.org/wiki/N-gram#Smoothing_techniques).
+
+
+- Katz's back-off model (https://en.wikipedia.org/wiki/Katz%27s_back-off_model)
+- https://gigadom.in/tag/katz-backoff/
+- https://github.com/ThachNgocTran/KatzBackOffModelImplementationInR
+- 
+
+**approach**
+- Use Markov chains to calculate the Maximum Likelihood estimate P(C|AB) = count(ABC)/count(AB)
+- For previous terms whose count is 0, perform Laplace Add - 1 smoothing Padd-1(C|AB) = (count(ABC) + 1)/(count(AB) + V)
+V=Vocabulary = alle n-grams?
+
+MLE = (Count(n grams) + 1)/ (Count(n-1 grams) + V)
+#V is the number of unique n-1 grams you have in the corpus
+https://www.quora.com/What-is-the-meaning-of-Vocabulary-in-n-gram-Laplace-Smoothing
+https://www.quora.com/Could-someone-explain-Laplacian-smoothing-or-1-up-smoothing
+
+- Use Katz backoff algorithm to back off to lower n-1 grams if not found in n grams
+- Create n-gram csv files with n-1 gram, next word and conditional probability
+
+### methods?
+- random forrest?

@@ -30,7 +30,7 @@ maxChars <- function(textDocument) {
 
 allStepsWithSampleData <- function() {
     c <- loadSampleCorpus()
-    c <- tm_map(c, FUN = stemDocument)
+#    c <- tm_map(c, FUN = stemDocument)
     c <- filterProfanityWords(c)
     c <- tm_map(c, FUN = stripWhitespace)
     c <- tm_map(c, FUN = content_transformer(tolower))
@@ -43,7 +43,7 @@ allStepsWithSampleData <- function() {
 
 allStepsWithTestData <- function() {
     c <- loadTestCorpus()
-    c <- tm_map(c, FUN = stemDocument)
+#    c <- tm_map(c, FUN = stemDocument)
     c <- filterProfanityWords(c)
     c <- tm_map(c, FUN = stripWhitespace)
     c <- tm_map(c, FUN = content_transformer(tolower))

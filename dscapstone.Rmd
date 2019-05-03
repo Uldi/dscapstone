@@ -30,9 +30,10 @@ c <- loadFullCorpus()
 ## Preprocessing
 ### Stemming
 ```{r Stemming}
-c <- tm_map(c, FUN = stemDocument)
+#c <- tm_map(c, FUN = stemDocument)
 ```
 Note: Should I really do stemming? Depends what I want to predict, stemmed or orginal words...
+--> No, I don't use stemming!
 
 ### Profane Filtering
 I decided to use a list of profanity words found on github. It seems to be a former Google list. 

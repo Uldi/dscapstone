@@ -1,7 +1,14 @@
-calculateMLE <- function(tdm_n, tdm_n_1, minFreq=5 ) {
-    df_n <- getTermCountDF(tdm_n, minFreq)
-    df_n_1 <- getTermCountDF(tdm_n_1, minFreq)
-    primCalculateMLE(df_n, df_n_1)
+setupNLP <- function() {
+    cm <- allStepsWithTestData()
+    tdm1 <- getTermDocMatrix(cm, 1)
+    tdm2 <- getTermDocMatrix(cm, 2)
+    tdm3 <- getTermDocMatrix(cm, 3)
+    tdm4 <- getTermDocMatrix(cm, 4)
+    getSBOTables(tdm4, tdm3, tdm2, tdm1, 1)
+}
+
+predictNLP <- function(ngramSBOTables, text) {
+    paste(text, "answer",sep = " ")
 }
 
 ### approach
@@ -14,7 +21,13 @@ calculateMLE <- function(tdm_n, tdm_n_1, minFreq=5 ) {
 ## V is the number of unique n-1 grams you have in the corpus
 ## MLE = (Count(n grams) + 1)/ (Count(n-1 grams) + V)
 ###
-    
+
+calculateMLE <- function(tdm_n, tdm_n_1, minFreq=5 ) {
+    df_n <- getTermCountDF(tdm_n, minFreq)
+    df_n_1 <- getTermCountDF(tdm_n_1, minFreq)
+    primCalculateMLE(df_n, df_n_1)
+}
+
 tbd_primCalculateMLE <- function(df_n, df_n_1) {
     ngram <- df_n[1,]$ngram
     ngram_1 <- paste(unlist(strsplit(ngram, " "))[-1], collapse = " ")
@@ -98,8 +111,8 @@ calcMLE <- function(ngram, df_x, df_x_1) {
     print(ngram)
     # helper calculations..
     words <- unlist(strsplit(ngram, " "))
-    ngramWord <- words[1]
-    ngram_1 <- paste(words[-1], collapse = " ")
+    ngramWord <- words[length(words)]
+    ngram_1 <- paste(words[-length(words)], collapse = " ")
     c_x <- df_x$count[df_x$ngram==ngram]
     c_x_1 <- df_x_1$count[df_x_1$ngram==ngram_1]
     mle <- c_x / c_x_1

@@ -7,7 +7,20 @@ setupNLP <- function() {
     getSBOTables(tdm4, tdm3, tdm2, tdm1, 1)
 }
 
+persistSBOModel <- function(sboTables) {
+    write.csv(sboTables[[4]], file="data/model/modelSBO4.csv", row.names = FALSE)
+    write.csv(sboTables[[3]], file="data/model/modelSBO3.csv", row.names = FALSE)
+    write.csv(sboTables[[2]], file="data/model/modelSBO2.csv", row.names = FALSE)
+    write.csv(sboTables[[1]], file="data/model/modelSBO1.csv", row.names = FALSE)
+}
 
+loadSBOModel <- function() {
+    sbo4 <- read.csv(file="data/model/modelSBO4.csv")
+    sbo3 <- read.csv(file="data/model/modelSBO3.csv")
+    sbo2 <- read.csv(file="data/model/modelSBO2.csv")
+    sbo1 <- read.csv(file="data/model/modelSBO1.csv")
+    list(sbo1, sbo2, sbo3, sbo4)
+}
 
 
 ### approach

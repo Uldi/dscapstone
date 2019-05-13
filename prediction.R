@@ -7,9 +7,8 @@ setupNLP <- function() {
     getSBOTables(tdm4, tdm3, tdm2, tdm1, 1)
 }
 
-predictNLP <- function(ngramSBOTables, text) {
-    paste(text, "answer",sep = " ")
-}
+
+
 
 ### approach
 ## 1. Use Markov chains to calculate the Maximum Likelihood estimate 
@@ -79,6 +78,88 @@ testCalcMLE <- function(df_n, df_n_1) {
 #
 # dazu benötige ich für ein ngram eine tabelle mit ngram_1, ngram Wort (ohne ngram_1), berechnetes P
 ######
+
+#predict using SBO approach
+predictSBONLP <- function(ngramSBOTables, text) {
+    
+    #ToDo
+    #idee wäre hier mit dem tokenizer package den Input zu zerstückeln...
+    words <- c()
+    if (nchar(trimws(text)) > 0) {
+        inputSubSentences <- unlist(text %>% tokenize_sentences(simplify = TRUE) %>% tokenize_regex(", "))
+        subSentence <- last(inputSubSentences)
+        #ToDo: Achtung ein neuer Satz muss mit Grossbuchstaben oder Zahl beginnen!
+        print(subSentence)
+        words <- subSentence %>% tokenize_words(simplify = TRUE)
+    }
+    
+    #Algorithmus:
+    #0-gram --> 1-grams mit höchster P (mle)
+    #1-gram --> 2-grams mit hächster P (mle) für 1-gram
+    #2-gram --> 3-grams mit hächster P (mle) für 2-gram
+    #3-gram --> 4-grams mit hächster P (mle) für 3-gram
+    
+    #words <- unlist(strsplit(subSentence, " "))
+    
+    ngramWord <- words[length(words)]
+    ngram_1 <- paste(words[-length(words)], collapse = " ")
+    nextWord <- NA
+    numWords <- length(words)
+    
+    # a = 0.4 (heuristik), k = 0
+    # P(C|AB) = count(ABC)/count(AB) (wenn count(ABC)  > k), a * P(B|A) sonst
+    # P(B|A) = count(AB)/count(A) wenn count(AB) > 0 und sonst a * P(A)
+    # P(A) = count(A)/V (Anzahl unigrams)
+    #Algorithmus bei 4-grams beginnen und dann runter iterieren
+    #4-gram bedingt ein geschriebenes 3-gram
+    #Assumption: k = 0!
+    if (numWords >= 3) {
+        last3Words <- paste(words[(numWords-2): numWords], collapse = " ")
+        printMsg("4-gram", last3Words)
+        
+        rows <- lookupNGram(ngramSBOTables[[4]], last3Words)
+        if (length(rows) > 0) {
+            nextWord <- rows[1,2]
+            printMsg("4-gram found", nextWord)
+        }
+    }
+    if (is.na(nextWord) && (numWords >= 2)) {
+        last2Words <- paste(words[(numWords-1): numWords], collapse = " ")
+        printMsg("3-gram", last2Words)
+        
+        rows <- lookupNGram(ngramSBOTables[[3]], last2Words)
+        if(length(rows) > 0) {
+            nextWord <- rows[1,2]
+            printMsg("3-gram found", nextWord)
+        }
+    }
+    if (is.na(nextWord) && (numWords >= 1)) {
+        lastWord <- words[numWords]
+        printMsg("2-gram", lastWord)
+        
+        rows <- lookupNGram(ngramSBOTables[[2]], lastWord)
+        if(length(rows) > 0) {
+            nextWord <- rows[1,2]
+            printMsg("2-gram found", nextWord)
+        } 
+    } 
+    if (is.na(nextWord)) {
+        print("1-gram")
+        rows <- ngramSBOTables[[1]]
+        nextWord <- rows[1,1]
+        printMsg("1-gram found", nextWord)
+    }
+    
+    #return orginial text appended with next word
+    trimws(paste(trimws(text), nextWord,sep = " "))
+}
+
+lookupNGram <- function(sboTable, ngram) {
+    rows <- sboTable %>% filter(ngram_1 == ngram)
+    #TODO: hier könnte ich evtl. nur die erste row zurückgeben...
+    rows
+}
+
 getSBOTables <-  function(tdm_4, tdm_3, tdm_2, tdm_1, minFreq=5) {
     df_4 <- getTermCountDF(tdm_4, minFreq)
     df_3 <- getTermCountDF(tdm_3, minFreq)
@@ -94,43 +175,47 @@ getSBOTables <-  function(tdm_4, tdm_3, tdm_2, tdm_1, minFreq=5) {
 
 primCalculateSBOTables <- function(df_n, df_n_1) {
     l  <- lapply(df_n$ngram, calcMLE, df_n, df_n_1)
-    sdf <- do.call(rbind, l)
-    sdf
+    df <- as.data.frame(do.call(rbind, l))
+    #keep for sbo only the ngrams with the highest probability per ngram_1
+    df %>% mutate(ngram_1=unlist(ngram_1), nextWord=unlist(nextWord), mle=unlist(mle)) %>%
+        group_by(ngram_1) %>% filter(mle==max(mle))
 }
 
-#tbd
+#
 primCalculateSBO_1Table <- function(df_1) {
     V <- as.integer(count(df_1))
     l  <- lapply(df_1$ngram, calcMLE_1, df_1, V)
-    sdf <- do.call(rbind, l)
-    sdf
+    df <- as.data.frame(do.call(rbind, l))
+    #keep for sbo only tghe ngrams with the highest probability
+    df %>% mutate(nextWord=unlist(nextWord), mle=unlist(mle)) %>%
+        filter(mle==max(mle))
 }
 
 #just calc the mle for known ngrams, no smoothing...
 calcMLE <- function(ngram, df_x, df_x_1) {
-    print(ngram)
+    #print(ngram)
     # helper calculations..
     words <- unlist(strsplit(ngram, " "))
-    ngramWord <- words[length(words)]
+    nextWord <- words[length(words)]
     ngram_1 <- paste(words[-length(words)], collapse = " ")
     c_x <- df_x$count[df_x$ngram==ngram]
     c_x_1 <- df_x_1$count[df_x_1$ngram==ngram_1]
     mle <- c_x / c_x_1
-    l <- list(ngram_1 = ngram_1, ngramWord = ngramWord, mle=mle)
-    print(l)
-    l
+    list(ngram_1 = ngram_1, nextWord = nextWord, mle=mle)
 }
 
 #just calc the mle for known 1-grams, no smoothing...
 calcMLE_1 <- function(ngram, df_1, V) {
-    print(ngram)
+    #print(ngram)
     c_x <- df_1$count[df_1$ngram==ngram]
     mle <- c_x / V
-    l <- list(ngramWord = ngram, mle=mle)
-    print(l)
-    l
+    list(nextWord = ngram, mle=mle)
 }
 
+
+#
+# ----------------- La Place Smoothing ---------
+#
 
 #calc mle and use laplace smoothing...
 calcMLELaPlace <- function(ngram, df_x, df_x_1, V) {
@@ -160,4 +245,13 @@ test_primCalculateMLE <- function(df_n, df_n_1) {
     
     mle <- (df_n$count[df_n$ngram==ngram] + 1) / (df_n_1$count[df_n_1$ngram==ngram_1] + V)
     mle
+}
+
+
+
+# ---------
+# Helper functions
+
+printMsg <- function(text, msg) {
+    print(paste(text, msg, sep = ": "))
 }

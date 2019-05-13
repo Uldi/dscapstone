@@ -11,20 +11,24 @@ library(shiny)
 
 # Define UI for application that draws a histogram
 shinyUI(fluidPage(
-  
-  # Application title
-  titlePanel("NLP Simple Test"),
-  
-  fluidPage(
-      
-      # Copy the line below to make a text input box
-      textInput("textInput", label = h3("Text input"), value = "Enter text..."),
-      submitButton("Submit"),
-      
-      hr(),
-      fluidRow(column(3, verbatimTextOutput("textOutput")))
-      
-      
-      
-  )
+    verticalLayout(
+        titlePanel("NLP Simple Test"),
+        hr(),
+        h4("Enter your dynamic Input"),
+        h5("(for word proposal enter 2 spaces!)"),
+        
+        textInput("dynText", label=NULL, value=""),
+        fluidRow(column(6, textOutput("fixedText")))
+    
+#        ,
+            # Copy the line below to make a text input box
+#        wellPanel(
+            #submitButton("Submit"),
+#            textInput("textInput", label = h3("Text input"), value = ""),
+          
+#            hr(),
+#            fluidRow(column(3, verbatimTextOutput("textDebug")))
+#            fluidRow(column(3, verbatimTextOutput("textOutput"))),
+#      )
+    )
 ))

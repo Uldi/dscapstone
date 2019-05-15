@@ -1,24 +1,34 @@
-setupNLP <- function() {
+setupTestNLP <- function() {
     cm <- allStepsWithTestData()
+    primSetupNLP(cm)
+}
+
+setupSampleNLP <- function() {
+    cm <- allStepsWithSampleData()
+    primSetupNLP(cm, 5)
+}
+
+primSetupNLP <- function(cm, minFreq=1) {
     tdm1 <- getTermDocMatrix(cm, 1)
     tdm2 <- getTermDocMatrix(cm, 2)
     tdm3 <- getTermDocMatrix(cm, 3)
     tdm4 <- getTermDocMatrix(cm, 4)
-    getSBOTables(tdm4, tdm3, tdm2, tdm1, 1)
+    getSBOTables(tdm4, tdm3, tdm2, tdm1, minFreq)
 }
 
-persistSBOModel <- function(sboTables) {
-    write.csv(sboTables[[4]], file="data/model/modelSBO4.csv", row.names = FALSE)
-    write.csv(sboTables[[3]], file="data/model/modelSBO3.csv", row.names = FALSE)
-    write.csv(sboTables[[2]], file="data/model/modelSBO2.csv", row.names = FALSE)
-    write.csv(sboTables[[1]], file="data/model/modelSBO1.csv", row.names = FALSE)
+
+persistSBOModel <- function(sboTables, modelName="model") {
+    write.csv(sboTables[[4]], file=paste0("data/model/", modelName, "SBO4.csv"), row.names = FALSE)
+    write.csv(sboTables[[3]], file=paste0("data/model/", modelName, "SBO3.csv"), row.names = FALSE)
+    write.csv(sboTables[[2]], file=paste0("data/model/", modelName, "SBO2.csv"), row.names = FALSE)
+    write.csv(sboTables[[1]], file=paste0("data/model/", modelName, "SBO1.csv"), row.names = FALSE)
 }
 
-loadSBOModel <- function() {
-    sbo4 <- read.csv(file="data/model/modelSBO4.csv")
-    sbo3 <- read.csv(file="data/model/modelSBO3.csv")
-    sbo2 <- read.csv(file="data/model/modelSBO2.csv")
-    sbo1 <- read.csv(file="data/model/modelSBO1.csv")
+loadSBOModel <- function(modelName="model") {
+    sbo4 <- read.csv(file=paste0("data/model/", modelName, "SBO4.csv"))
+    sbo3 <- read.csv(file=paste0("data/model/", modelName, "SBO3.csv"))
+    sbo2 <- read.csv(file=paste0("data/model/", modelName, "SBO2.csv"))
+    sbo1 <- read.csv(file=paste0("data/model/", modelName, "SBO1.csv"))
     list(sbo1, sbo2, sbo3, sbo4)
 }
 
@@ -214,7 +224,9 @@ calcMLE <- function(ngram, df_x, df_x_1) {
     c_x <- df_x$count[df_x$ngram==ngram]
     c_x_1 <- df_x_1$count[df_x_1$ngram==ngram_1]
     mle <- c_x / c_x_1
-    list(ngram_1 = ngram_1, nextWord = nextWord, mle=mle)
+    #data.frame(ngram_1, nextWord, mle)
+    #as.data.frame(list(ngram_1, nextWord, mle), row.names=c("ngram_1", "nextWord", "mle"))
+    list(ngram_1=ngram_1, nextWord=nextWord, mle=mle)
 }
 
 #just calc the mle for known 1-grams, no smoothing...

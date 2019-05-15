@@ -15,8 +15,8 @@ shinyServer(function(input, output, session) {
     print("load NLP prediction model")
     setwd("/Users/david/Coursera/assignments/dscapstone")
     print(getwd())
-    #ngramSBOTables <- setupNLP()
-    ngramSBOTables <- loadSBOModel()
+    #ngramSBOTables <- setupTestNLP()
+    ngramSBOTables <- loadSBOModel("test")
     text <- ""
     print("load NLP prediction model - completed")
     

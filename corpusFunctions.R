@@ -34,7 +34,7 @@ allStepsWithSampleData <- function() {
     c <- filterProfanityWords(c)
     c <- tm_map(c, FUN = stripWhitespace)
     c <- tm_map(c, FUN = content_transformer(tolower))
-    c <- tm_map(c, FUN = removePunctuation, preserve_intra_word_contractions = TRUE, preserve_intra_word_dashes = TRUE)
+    c <- tm_map(c, FUN = removePunctuation, preserve_intra_word_contractions = TRUE, preserve_intra_word_dashes = TRUE, ucp=TRUE)
     c <- tm_map(c, FUN = removeNumbers)
     cm <- VCorpus(VectorSource(c(c[[1]]$content, c[[2]]$content, c[[3]]$content)))
     cm
@@ -47,7 +47,7 @@ allStepsWithTestData <- function() {
     c <- filterProfanityWords(c)
     c <- tm_map(c, FUN = stripWhitespace)
     c <- tm_map(c, FUN = content_transformer(tolower))
-    c <- tm_map(c, FUN = removePunctuation, preserve_intra_word_contractions = TRUE, preserve_intra_word_dashes = TRUE)
+    c <- tm_map(c, FUN = removePunctuation, preserve_intra_word_contractions = TRUE, preserve_intra_word_dashes = TRUE, ucp=TRUE)
     c <- tm_map(c, FUN = removeNumbers)
     cm <- VCorpus(VectorSource(c(c[[1]]$content)))
     cm
@@ -85,7 +85,7 @@ plotTopFrequentTerms <- function(tdm, frequency=100, ngram="n") {
 }
 
 getTermDocMatrix <- function(corpus, ngram) {
-    TermDocumentMatrix(corpus,list(tokenize = 
+    TermDocumentMatrix(corpus,list(wordLengths=c(2, Inf), tokenize = 
                                    function(x) NGramTokenizer(x, Weka_control(min=ngram, max=ngram, delimiters=" \r\n\t.,;:\"()?!"))))
 }
 

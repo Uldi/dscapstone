@@ -85,7 +85,7 @@ plotTopFrequentTerms <- function(tdm, frequency=100, ngram="n") {
 }
 
 getTermDocMatrix <- function(corpus, ngram) {
-    TermDocumentMatrix(corpus,list(wordLengths=c(2, Inf), tokenize = 
+    TermDocumentMatrix(corpus,list(wordLengths=c(1, Inf), tokenize = 
                                    function(x) NGramTokenizer(x, Weka_control(min=ngram, max=ngram, delimiters=" \r\n\t.,;:\"()?!"))))
 }
 

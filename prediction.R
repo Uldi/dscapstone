@@ -4,16 +4,30 @@ setupTestNLP <- function() {
 }
 
 setupSampleNLP <- function() {
+    print(paste("setupSampleNLP: start", date()))
     cm <- allStepsWithSampleData()
-    primSetupNLP(cm, 5)
+    print("setupSampleNLP: corpus prepared")
+    sbo <- primSetupNLP(cm, 5)
+    print(paste("setupSampleNLP: end", date()))
+    sbo
 }
 
 primSetupNLP <- function(cm, minFreq=1) {
+    #bei getTermDocMatrix lohnt sich die Parallelisierung nicht, da immer auf cm zugegriffen wird!
+    print("primSetupNLP: getTermDocMatrix 1")
     tdm1 <- getTermDocMatrix(cm, 1)
+    print("primSetupNLP: getTermDocMatrix 2")
     tdm2 <- getTermDocMatrix(cm, 2)
+    print("primSetupNLP: getTermDocMatrix 3")
     tdm3 <- getTermDocMatrix(cm, 3)
+    print("primSetupNLP: getTermDocMatrix 4")
     tdm4 <- getTermDocMatrix(cm, 4)
+    
+    print("primSetupNLP: getSBOTables")
     getSBOTables(tdm4, tdm3, tdm2, tdm1, minFreq)
+    
+    #print("primSetupNLP: getParSBOTables")
+    #getParSBOTables(tdm4, tdm3, tdm2, tdm1, minFreq)
 }
 
 
@@ -196,12 +210,57 @@ getSBOTables <-  function(tdm_4, tdm_3, tdm_2, tdm_1, minFreq=5) {
     list(sdf_1, sdf_2, sdf_3, sdf_4)
 }
 
+#getParSBOTables <- function(cm, minFreq=5) {
+getParSBOTables <-  function(tdm_4, tdm_3, tdm_2, tdm_1, minFreq=5) {
+    cl <- makeForkCluster(4)
+    
+#    print("getParSBOTables: getTermDocMatrix")
+#    tdmList <- clusterApply(cl, list(1,2,3,4), function(n) {
+#        getTermDocMatrix(cm, n)
+#    })
+#    print("getParSBOTables: getTermDocMatrix done")
+    
+    print("getParSBOTables: getTermCountDF")
+    dfList <- clusterApply(cl, list(tdm_1, tdm_2, tdm_3, tdm_4), function(tdm) {
+    #dfList <- clusterApply(cl, tdmList, function(tdm) {
+        getTermCountDF(tdm, minFreq)
+    })
+    print("getParSBOTables: getTermCountDF done")
+#    stopCluster(cl)
+    
+    dfPairs <- list(list(dfList[[1]], dfList[[2]]), list(dfList[[2]], dfList[[3]]), list(dfList[[3]], dfList[[4]]))
+    
+#    cl <- makeForkCluster(3)
+    print("getParSBOTables: primCalculateSBOTables")
+    sdfList <- clusterApply(cl, dfPairs, function(df) {
+        primCalculateSBOTables(df[[2]], df[[1]])
+    })
+    print("getParSBOTables: primCalculateSBOTables done")
+    
+    stopCluster(cl)
+    
+    print("getParSBOTables: primCalculateSBO_1Table")
+    sdf_1 <- primCalculateSBO_1Table(dfList[[1]])
+    print("getParSBOTables: primCalculateSBO_1Table done")
+    
+    list(sdf_1, sdfList[[1]], sdfList[[2]], sdfList[[3]])
+}
+
+clusterTest <- function() {
+    cl <- makeForkCluster(4)  # fork after the variables have been set up
+    params <- c("a", "b", "c", "d")
+    res <- clusterApply(cl, params, function(p) print(paste0(p, p)))
+ #   minFreq=1
+  #  run4 <- function(tdm)  getTermCountDF(tdm, minFreq)
+    stopCluster(cl)
+    res
+}
+
 primCalculateSBOTables <- function(df_n, df_n_1) {
     l  <- lapply(df_n$ngram, calcMLE, df_n, df_n_1)
     df <- as.data.frame(do.call(rbind, l))
     #keep for sbo only the ngrams with the highest probability per ngram_1
-    df %>% mutate(ngram_1=unlist(ngram_1), nextWord=unlist(nextWord), mle=unlist(mle)) %>%
-        group_by(ngram_1) %>% filter(mle==max(mle))
+    df %>% group_by(ngram_1) %>% filter(mle==max(mle))
 }
 
 #
@@ -210,8 +269,7 @@ primCalculateSBO_1Table <- function(df_1) {
     l  <- lapply(df_1$ngram, calcMLE_1, df_1, V)
     df <- as.data.frame(do.call(rbind, l))
     #keep for sbo only tghe ngrams with the highest probability
-    df %>% mutate(nextWord=unlist(nextWord), mle=unlist(mle)) %>%
-        filter(mle==max(mle))
+    df %>% filter(mle==max(mle))
 }
 
 #just calc the mle for known ngrams, no smoothing...
@@ -224,17 +282,15 @@ calcMLE <- function(ngram, df_x, df_x_1) {
     c_x <- df_x$count[df_x$ngram==ngram]
     c_x_1 <- df_x_1$count[df_x_1$ngram==ngram_1]
     mle <- c_x / c_x_1
-    #data.frame(ngram_1, nextWord, mle)
-    #as.data.frame(list(ngram_1, nextWord, mle), row.names=c("ngram_1", "nextWord", "mle"))
-    list(ngram_1=ngram_1, nextWord=nextWord, mle=mle)
+    data.frame(ngram_1, nextWord, mle)
 }
 
 #just calc the mle for known 1-grams, no smoothing...
-calcMLE_1 <- function(ngram, df_1, V) {
+calcMLE_1 <- function(nextWord, df_1, V) {
     #print(ngram)
-    c_x <- df_1$count[df_1$ngram==ngram]
+    c_x <- df_1$count[df_1$ngram==nextWord]
     mle <- c_x / V
-    list(nextWord = ngram, mle=mle)
+    data.frame(nextWord, mle)
 }
 
 

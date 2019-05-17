@@ -16,7 +16,7 @@ shinyServer(function(input, output, session) {
     setwd("/Users/david/Coursera/assignments/dscapstone")
     print(getwd())
     #ngramSBOTables <- setupTestNLP()
-    ngramSBOTables <- loadSBOModel("test")
+    ngramSBOTables <- loadSBOModel("sample")
     text <- ""
     print("load NLP prediction model - completed")
     
@@ -34,7 +34,7 @@ shinyServer(function(input, output, session) {
         #hier habe ich noch ein loop problem...
         if(grepl("  $", textInput)) {
             updateTextInput(session,"dynText",value=predictSBONLP(ngramSBOTables, textInput))
-        } else if (grepl("\\.$", textInput)) {
+        } else if (grepl("[\\.!?;,:]$", textInput)) {
             text <<- paste(text, textInput, sep=" ")
             updateTextInput(session, "dynText", value="")
             output$fixedText <- renderText({text})

@@ -87,7 +87,7 @@ analyseFrequentTerms <- function(tdm, numTerms=10, minFreq=100, ngram="n") {
     ft <- (tdm[findFreqTerms(tdm,minFreq),] %>%
                 as.matrix() %>%
                 rowSums() %>% sort(decreasing = TRUE)) [1:numTerms]
-    barplot(ft, cex.names = 0.4, main= paste("top", numTerms, ngram, "-grams", sep = " "))
+    barplot(ft, las=2, cex.names = 1.0, main= paste("top", numTerms, ngram, "-grams", sep = " "))
 }
 
 plotTopFrequentTerms <- function(tdm, frequency=100, ngram="n") {

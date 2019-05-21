@@ -79,14 +79,14 @@ tdm2 <- getTermDocMatrix(cm, 2)
 tdm3 <- getTermDocMatrix(cm, 3)
 tdm4 <- getTermDocMatrix(cm, 4)
 
-par(mfrow = c(2, 2))
+par(mfrow = c(2, 2), mar=c(7,4,4,2))
 analyseFrequentTerms(tdm1, 10, ngram=1)
 analyseFrequentTerms(tdm2, 10, ngram=2)
 analyseFrequentTerms(tdm3, 10, ngram=3)
 analyseFrequentTerms(tdm4, 10, minFreq=10, ngram=4)
 ```
 
-See appendix for ngram details. The distribution analysis of the ngram frequency shows that few ngrams (<100) cover most of the corpus. See appendix for top 100 ngram diagrams. 
+The distribution analysis of the ngram frequency shows that few ngrams (<100) cover most of the corpus. See appendix for top 100 ngram diagrams. 
 
 ### Tool Usage
 I did my first data exploration and corpus manipulation using the R packages tm and RWeka. They work fine but seem to be very slow and memory consuming. Online research share these findings and recommend the usage of Quanteda. Quanteda offers similar functions and the migration seems to be quite straight forward.
@@ -107,14 +107,6 @@ I also did a first prototyp ot the Shiny App. It predicts the next word as soon 
 
 
 ## Appendix
-Here is a list of the topmost 1-, 2-, 3- and 5-grams
-```{r list most frequent terms, eval=TRUE}
-listMostFrequentTerms(tdm1, 10, ngram=1)
-listMostFrequentTerms(tdm2, 10, ngram=2)
-listMostFrequentTerms(tdm3, 10, ngram=3)
-listMostFrequentTerms(tdm4, 10, minFreq=10, ngram=4)
-```
-
 The following plots show the distribution of the top1 100 ngram frequencies (sorted by descening frequency). It shows that less than 100 ngrams are covering most of the corpus.
 ```{r top 100 frequent terms, eval=TRUE}
 par(mfrow = c(2, 2))

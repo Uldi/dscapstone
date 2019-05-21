@@ -41,6 +41,19 @@ allStepsWithSampleData <- function() {
     
 }
 
+allStepsWithFullData <- function() {
+    c <- loadFullCorpus()
+    #    c <- tm_map(c, FUN = stemDocument)
+    c <- filterProfanityWords(c)
+    c <- tm_map(c, FUN = stripWhitespace)
+    c <- tm_map(c, FUN = content_transformer(tolower))
+    c <- tm_map(c, FUN = removePunctuation, preserve_intra_word_contractions = TRUE, preserve_intra_word_dashes = TRUE, ucp=TRUE)
+    c <- tm_map(c, FUN = removeNumbers)
+    cm <- VCorpus(VectorSource(c(c[[1]]$content, c[[2]]$content, c[[3]]$content)))
+    cm
+    
+}
+
 allStepsWithTestData <- function() {
     c <- loadTestCorpus()
 #    c <- tm_map(c, FUN = stemDocument)

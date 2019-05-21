@@ -12,6 +12,15 @@ setupSampleNLP <- function() {
     sbo
 }
 
+setupFullNLP <- function() {
+    print(paste("setupFullNLP: start", date()))
+    cm <- allStepsWithFullData()
+    print("setupFullNLP: corpus prepared")
+    sbo <- primSetupNLP(cm, 100)
+    print(paste("setupFullNLP: end", date()))
+    sbo
+}
+
 primSetupNLP <- function(cm, minFreq=1) {
     #bei getTermDocMatrix lohnt sich die Parallelisierung nicht, da immer auf cm zugegriffen wird!
     print("primSetupNLP: getTermDocMatrix 1")

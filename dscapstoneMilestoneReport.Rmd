@@ -1,0 +1,154 @@
+---
+title: "DS Capstone Milestone Report"
+author: "David"
+date: "20 05 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+## Project Overview
+The datascience capstone is about developing a predictive text model that predicts the next best word based on the last words you already typed. A feature well known from Swiftkey. The predictive text model has to be developed based on a text corpus provided. News, twitter and blog messages of a total of about 560MB data. 
+
+The developed prediction model needs to be demonstrated using a Shiny App and documented with a short, precise slide presentation. 
+
+This milestone report will give you an insight about the status of my work on the course project. 
+
+## Data Exploration
+
+```{r load libraries, echo=FALSE, message=FALSE, warning=FALSE}
+library(tm)
+library(SnowballC)
+library(RWeka)
+library(dplyr)
+library(tokenizers)
+
+source("loaddata.R")
+source("corpusFunctions.R")
+source("prediction.R")
+```
+
+
+The data preparation and exploratory data analysis was first done on a sampled subset of 1% of the provided text corpus to get everything up and running. After success it was applied to the full data sets. Data preparation and exploration of this milestone report are based on the sampled subset. 
+
+### Data Summary
+The follwing table provides a summary of the sample and full data sets
+```{r load data, echo=FALSE, message=FALSE, warning=FALSE}
+c <- loadSampleCorpus()
+cFull <- loadFullCorpus()
+```
+Data Set | #Lines | #Terms | #Characters
+-------- | -------| ------- | ----------
+Sample Blogs | `r length(c[[1]]$content)` | `r nTerms(TermDocumentMatrix(c[1]))` | `r sum(nchar(c[[1]]$content))`
+Sample News | `r length(c[[2]]$content)` | `r nTerms(TermDocumentMatrix(c[2]))` | `r sum(nchar(c[[2]]$content))`
+Sample Twitter | `r length(c[[3]]$content)` | `r nTerms(TermDocumentMatrix(c[3]))` | `r sum(nchar(c[[3]]$content))`
+All Blogs | `r length(cFull[[1]]$content)` | `r nTerms(TermDocumentMatrix(cFull[1]))` | `r sum(nchar(cFull[[1]]$content))`
+All News | `r length(cFull[[2]]$content)` | `r nTerms(TermDocumentMatrix(cFull[2]))` | `r sum(nchar(cFull[[2]]$content))`
+All Twitter | `r length(cFull[[3]]$content)` | `r nTerms(TermDocumentMatrix(cFull[3]))` | `r sum(nchar(cFull[[3]]$content))`
+
+As expected twitter messages seem to be in average shorter but with a bigger set of terms. This most likely due to the 140 (now 280) character limitation.
+
+
+### Data Preparation
+The following steps were applied for data preparation using the packages tm and RWeka 
+
+- Profane filtering based on a former Google list (https://github.com/RobertJGabriel/Google-profanity-words/blob/master/list.txt)
+- I decided not to use stemming as I want to predict full words and not stemmed words
+- Removal of white space, punctuation and numbers
+- Conversion of everything to lower
+- Merging of the 3 text corpi into a single corpus
+
+
+```{r preparation, echo=FALSE, message=FALSE}
+c <- filterProfanityWords(c)
+c <- tm_map(c, FUN = stripWhitespace)
+c <- tm_map(c, FUN = content_transformer(tolower))
+c <- tm_map(c, FUN = removePunctuation, preserve_intra_word_contractions = TRUE, preserve_intra_word_dashes = TRUE)
+c <- tm_map(c, FUN = removeNumbers)
+cm <- VCorpus(VectorSource(c(c[[1]]$content, c[[2]]$content, c[[3]]$content)))
+```
+
+### Data Exploration
+
+### n-grams Analysis
+Calculate the TermDocumentMatrix for 1- to 4-grams and plot the 10 most frequent ngrams (1-4). 
+```{r generate TermDocumentMatrix,eval=TRUE}
+tdm1 <- getTermDocMatrix(cm, 1)
+tdm2 <- getTermDocMatrix(cm, 2)
+tdm3 <- getTermDocMatrix(cm, 3)
+tdm4 <- getTermDocMatrix(cm, 4)
+
+par(mfrow = c(2, 2))
+analyseFrequentTerms(tdm1, 10, ngram=1)
+analyseFrequentTerms(tdm2, 10, ngram=2)
+analyseFrequentTerms(tdm3, 10, ngram=3)
+analyseFrequentTerms(tdm4, 10, minFreq=10, ngram=4)
+```
+
+See appendix for ngram details. The distribution analysis of the ngram frequency shows that few ngrams (<100) cover most of the corpus. See appendix for top 100 ngram diagrams. 
+
+### Tool Usage
+I did my first data exploration and corpus manipulation using the R packages tm and RWeka. They work fine but seem to be very slow and memory consuming. Online research share these findings and recommend the usage of Quanteda. Quanteda offers similar functions and the migration seems to be quite straight forward.
+
+## Prediction Approach
+For the prediction approach I will go for a Katz back-off model (https://en.wikipedia.org/wiki/Katz%27s_back-off_model). 
+
+- I use the Katz back-off algorithm to back-off to lower n-1 grams if not found in n grams
+- In a first step I will use the stupid back-off approach wihout using any smoothing approaches. See https://www.aclweb.org/anthology/D07-1090.pdf for details. 
+- In a second step I will dig into smooting and further approaches. E.g. Kneser-Ney or Laplace add-1 smoothing.
+- The model is being persisted in csv files with variables n-1 gram, next word and conditional probability
+
+A first prototyp of my stupid back-off approach shows already very promising prediction results. Stupid back-off shows the better results the bigger the training corpus is. 
+
+
+## Shiny App
+I also did a first prototyp ot the Shiny App. It predicts the next word as soon as you enter 2 spaces. It already supports sentence detection and punctuations to avoid predicting accross sentences.
+
+
+## Appendix
+Here is a list of the topmost 1-, 2-, 3- and 5-grams
+```{r list most frequent terms, eval=TRUE}
+listMostFrequentTerms(tdm1, 10, ngram=1)
+listMostFrequentTerms(tdm2, 10, ngram=2)
+listMostFrequentTerms(tdm3, 10, ngram=3)
+listMostFrequentTerms(tdm4, 10, minFreq=10, ngram=4)
+```
+
+The following plots show the distribution of the top1 100 ngram frequencies (sorted by descening frequency). It shows that less than 100 ngrams are covering most of the corpus.
+```{r top 100 frequent terms, eval=TRUE}
+par(mfrow = c(2, 2))
+plotTopFrequentTerms(tdm1, ngram=1)
+plotTopFrequentTerms(tdm2, ngram=2)
+plotTopFrequentTerms(tdm3, ngram=3)
+plotTopFrequentTerms(tdm4, ngram=4)
+```
+
+### R Helper Functions
+```{r, eval=FALSE}
+listMostFrequentTerms <- function(tdm, numTerms=10, minFreq=100, ngram="n") {
+    ft <- (tdm[findFreqTerms(tdm,minFreq),] %>%
+               as.matrix() %>%
+               rowSums() %>% sort(decreasing = TRUE)) [1:numTerms]
+    as.matrix(ft)
+} 
+
+analyseFrequentTerms <- function(tdm, numTerms=10, minFreq=100, ngram="n") {
+    ft <- (tdm[findFreqTerms(tdm,minFreq),] %>%
+                as.matrix() %>%
+                rowSums() %>% sort(decreasing = TRUE)) [1:numTerms]
+    barplot(ft, cex.names = 0.4, main= paste("top", numTerms, ngram, "-grams", sep = " "))
+}
+
+plotTopFrequentTerms <- function(tdm, frequency=100, ngram="n") {
+    ft <- (tdm[findFreqTerms(tdm,10),] %>%
+               as.matrix() %>%
+               rowSums() %>% sort(decreasing = TRUE)) [1:100]
+    plot(ft, main=paste("top", frequency, "frequent", ngram, "-grams"), ylab="frequency", xlab="terms with decreasing frequency")
+}
+
+getTermDocMatrix <- function(corpus, ngram) {
+    TermDocumentMatrix(corpus,list(wordLengths=c(1, Inf), tokenize = 
+                                   function(x) NGramTokenizer(x, Weka_control(min=ngram, max=ngram, delimiters=" \r\n\t.,;:\"()?!"))))
+}
+```

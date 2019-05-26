@@ -8,17 +8,21 @@
 #
 
 library(shiny)
+library(futile.logger)
+library(dplyr)
+
 
 # Define server logic required to draw a histogram
 shinyServer(function(input, output, session) {
    
-    print("load NLP prediction model")
+    flog.info("load NLP prediction model")
     setwd("/Users/david/Coursera/assignments/dscapstone")
-    print(getwd())
+    flog.trace(getwd())
     #ngramSBOTables <- setupTestNLP()
-    ngramSBOTables <- loadSBOModel("sample")
+    #ngramSBOTables <- loadSBOModel("sample")
+    ngramSBOTables <- loadSBOModel("full25")
     text <- ""
-    print("load NLP prediction model - completed")
+    flog.info("load NLP prediction model - completed")
     
     predictedText <- reactive({
         textInput <- input$textInput

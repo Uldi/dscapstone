@@ -1,42 +1,58 @@
+initLibraries <- function() {
+    library(tm)
+    library(dplyr)
+    library(tokenizers)
+    library(quanteda)
+    library(readtext)
+    library(futile.logger)
+    flog.threshold(TRACE)
+}
+
 setupTestNLP <- function() {
-    cm <- allStepsWithTestData()
-    primSetupNLP(cm)
+    initLibraries()
+    tokens <- prepareTestCorpus()
+    persistCorpus(tokens, "test1")
+#    Rprof("rprof.out", append=FALSE)
+    primSetupNLP(tokens)
+#    Rprof(NULL)
 }
 
 setupSampleNLP <- function() {
-    print(paste("setupSampleNLP: start", date()))
-    cm <- allStepsWithSampleData()
-    print("setupSampleNLP: corpus prepared")
-    sbo <- primSetupNLP(cm, 5)
-    print(paste("setupSampleNLP: end", date()))
+    initLibraries()
+    flog.info("setupSampleNLP: start")
+    tokens <- prepareSampleCorpus()
+    flog.trace("setupSampleNLP: corpus prepared")
+    Rprof("rprof.out", append=FALSE)
+    sbo <- primSetupNLP(tokens, 5)
+    Rprof(NULL)
+    flog.info("setupSampleNLP: end")
     sbo
 }
 
 setupFullNLP <- function() {
-    print(paste("setupFullNLP: start", date()))
-    cm <- allStepsWithFullData()
-    print("setupFullNLP: corpus prepared")
-    sbo <- primSetupNLP(cm, 100)
-    print(paste("setupFullNLP: end", date()))
+    initLibraries()
+    flog.info("setupFullNLP: start")
+    tokens <- prepareFullCorpus()
+    persistCorpus(tokens, "full10")
+    flog.trace("setupFullNLP: corpus prepared")
+    sbo <- primSetupNLP(tokens, 10)
+    flog.info("setupFullNLP: end")
     sbo
 }
 
-primSetupNLP <- function(cm, minFreq=1) {
+primSetupNLP <- function(tokens, minFreq=1) {
     #bei getTermDocMatrix lohnt sich die Parallelisierung nicht, da immer auf cm zugegriffen wird!
-    print("primSetupNLP: getTermDocMatrix 1")
-    tdm1 <- getTermDocMatrix(cm, 1)
-    print("primSetupNLP: getTermDocMatrix 2")
-    tdm2 <- getTermDocMatrix(cm, 2)
-    print("primSetupNLP: getTermDocMatrix 3")
-    tdm3 <- getTermDocMatrix(cm, 3)
-    print("primSetupNLP: getTermDocMatrix 4")
-    tdm4 <- getTermDocMatrix(cm, 4)
+    flog.trace("primSetupNLP: getDocFeatureMatrix 1")
+    dfm1 <- getDocFeatureMatrix(tokens, 1)
+    flog.trace("primSetupNLP: getDocFeatureMatrix 2")
+    dfm2 <- getDocFeatureMatrix(tokens, 2)
+    flog.trace("primSetupNLP: getDocFeatureMatrix 3")
+    dfm3 <- getDocFeatureMatrix(tokens, 3)
+    flog.trace("primSetupNLP: getDocFeatureMatrix 4")
+    dfm4 <- getDocFeatureMatrix(tokens, 4)
     
-    print("primSetupNLP: getSBOTables")
-    getSBOTables(tdm4, tdm3, tdm2, tdm1, minFreq)
-    
-    #print("primSetupNLP: getParSBOTables")
-    #getParSBOTables(tdm4, tdm3, tdm2, tdm1, minFreq)
+    flog.trace("primSetupNLP: getSBOTables")
+    getSBOTables(dfm1, dfm2, dfm3, dfm4, minFreq)
 }
 
 
@@ -48,6 +64,7 @@ persistSBOModel <- function(sboTables, modelName="model") {
 }
 
 loadSBOModel <- function(modelName="model") {
+    library(tokenizers)
     sbo4 <- read.csv(file=paste0("data/model/", modelName, "SBO4.csv"))
     sbo3 <- read.csv(file=paste0("data/model/", modelName, "SBO3.csv"))
     sbo2 <- read.csv(file=paste0("data/model/", modelName, "SBO2.csv"))
@@ -55,41 +72,6 @@ loadSBOModel <- function(modelName="model") {
     list(sbo1, sbo2, sbo3, sbo4)
 }
 
-
-### approach
-## 1. Use Markov chains to calculate the Maximum Likelihood estimate 
-##    P(C|AB) = count(ABC)/count(AB)
-##
-## 2. For previous terms whose count is 0, perform Laplace Add - 1 smoothing 
-##    Padd-1(C|AB) = (count(ABC) + 1)/(count(AB) + V)
-##
-## V is the number of unique n-1 grams you have in the corpus
-## MLE = (Count(n grams) + 1)/ (Count(n-1 grams) + V)
-###
-
-calculateMLE <- function(tdm_n, tdm_n_1, minFreq=5 ) {
-    df_n <- getTermCountDF(tdm_n, minFreq)
-    df_n_1 <- getTermCountDF(tdm_n_1, minFreq)
-    primCalculateMLE(df_n, df_n_1)
-}
-
-tbd_primCalculateMLE <- function(df_n, df_n_1) {
-    ngram <- df_n[1,]$ngram
-    ngram_1 <- paste(unlist(strsplit(ngram, " "))[-1], collapse = " ")
-    V <- as.integer(count(df_n_1))
-    
-    mle <- (df_n$count[df_n$ngram==ngram] + 1) / (df_n_1$count[df_n_1$ngram==ngram_1] + V)
-    mle
-    lapply(df_n, calcMLE)
-    
-}
-
-testCalcMLE <- function(df_n, df_n_1) {
-    V <- as.integer(count(df_n_1))
-    p <- lapply(df_n$ngram, calcMLE, df_n, df_n_1,V)
-    df_n$p = unlist(p)
-    df_n
-}
 
 # source: https://gigadom.in/tag/katz-backoff/
 # source: https://en.wikipedia.org/wiki/Katz%27s_back-off_model
@@ -206,106 +188,131 @@ lookupNGram <- function(sboTable, ngram) {
     rows
 }
 
-getSBOTables <-  function(tdm_4, tdm_3, tdm_2, tdm_1, minFreq=5) {
-    df_4 <- getTermCountDF(tdm_4, minFreq)
-    df_3 <- getTermCountDF(tdm_3, minFreq)
-    df_2 <- getTermCountDF(tdm_2, minFreq)
-    df_1 <- getTermCountDF(tdm_1, minFreq)
 
+getSBOTables <-  function(dfm1, dfm2, dfm3, dfm4, minFreq=5) {
+    flog.trace("getSBOTables: getTermCountDF 4")
+    df_4 <- getTermCountDF(dfm4, minFreq)
+    flog.trace("getSBOTables: getTermCountDF 3")
+    df_3 <- getTermCountDF(dfm3, minFreq)
+    flog.trace("getSBOTables: getTermCountDF 2")
+    df_2 <- getTermCountDF(dfm2, minFreq)
+    flog.trace("getSBOTables: getTermCountDF 1")
+    df_1 <- getTermCountDF(dfm1, minFreq)
+
+    flog.trace("getSBOTables: primCalculateSBOTables 4")
     sdf_4 <- primCalculateSBOTables(df_4, df_3)
+    flog.trace("getSBOTables: primCalculateSBOTables 3")
     sdf_3 <- primCalculateSBOTables(df_3, df_2)
+    flog.trace("getSBOTables: primCalculateSBOTables 2")
     sdf_2 <- primCalculateSBOTables(df_2, df_1)
+    flog.trace("getSBOTables: primCalculateSBO_1Table 1")
     sdf_1 <- primCalculateSBO_1Table(df_1)
     list(sdf_1, sdf_2, sdf_3, sdf_4)
 }
 
-#getParSBOTables <- function(cm, minFreq=5) {
-getParSBOTables <-  function(tdm_4, tdm_3, tdm_2, tdm_1, minFreq=5) {
-    cl <- makeForkCluster(4)
-    
-#    print("getParSBOTables: getTermDocMatrix")
-#    tdmList <- clusterApply(cl, list(1,2,3,4), function(n) {
-#        getTermDocMatrix(cm, n)
-#    })
-#    print("getParSBOTables: getTermDocMatrix done")
-    
-    print("getParSBOTables: getTermCountDF")
-    dfList <- clusterApply(cl, list(tdm_1, tdm_2, tdm_3, tdm_4), function(tdm) {
-    #dfList <- clusterApply(cl, tdmList, function(tdm) {
-        getTermCountDF(tdm, minFreq)
-    })
-    print("getParSBOTables: getTermCountDF done")
-#    stopCluster(cl)
-    
-    dfPairs <- list(list(dfList[[1]], dfList[[2]]), list(dfList[[2]], dfList[[3]]), list(dfList[[3]], dfList[[4]]))
-    
-#    cl <- makeForkCluster(3)
-    print("getParSBOTables: primCalculateSBOTables")
-    sdfList <- clusterApply(cl, dfPairs, function(df) {
-        primCalculateSBOTables(df[[2]], df[[1]])
-    })
-    print("getParSBOTables: primCalculateSBOTables done")
-    
-    stopCluster(cl)
-    
-    print("getParSBOTables: primCalculateSBO_1Table")
-    sdf_1 <- primCalculateSBO_1Table(dfList[[1]])
-    print("getParSBOTables: primCalculateSBO_1Table done")
-    
-    list(sdf_1, sdfList[[1]], sdfList[[2]], sdfList[[3]])
-}
-
-clusterTest <- function() {
-    cl <- makeForkCluster(4)  # fork after the variables have been set up
-    params <- c("a", "b", "c", "d")
-    res <- clusterApply(cl, params, function(p) print(paste0(p, p)))
- #   minFreq=1
-  #  run4 <- function(tdm)  getTermCountDF(tdm, minFreq)
-    stopCluster(cl)
-    res
-}
 
 primCalculateSBOTables <- function(df_n, df_n_1) {
-    l  <- lapply(df_n$ngram, calcMLE, df_n, df_n_1)
-    df <- as.data.frame(do.call(rbind, l))
+    V <- as.integer(count(df_n))
+    mle <- numeric(V)
+    nextWord <- character(V)
+    ngram_1 <- character(V)
+    for (i in 1:V) {
+        i_ngram <- df_n$ngram[i]
+        words <- unlist(strsplit(i_ngram, " "))
+        i_nextWord <- words[length(words)]
+        i_ngram_1 <- paste(words[-length(words)], collapse = " ")
+        
+        c_n <- df_n$count[i]
+        c_n_1 <- df_n_1$count[df_n_1$ngram==i_ngram_1]
+        mle[i] <- c_n / c_n_1
+        nextWord[i] <- i_nextWord
+        ngram_1[i] <- i_ngram_1
+    }
+    df <- data.frame(ngram_1, nextWord, mle)
     #keep for sbo only the ngrams with the highest probability per ngram_1
-    df %>% group_by(ngram_1) %>% filter(mle==max(mle))
+    #don't filter for the quiz 3 as i need the other probabilities
+    df %>% group_by(ngram_1) #%>% filter(mle==max(mle))
 }
 
 #
-primCalculateSBO_1Table <- function(df_1) {
-    V <- as.integer(count(df_1))
-    l  <- lapply(df_1$ngram, calcMLE_1, df_1, V)
-    df <- as.data.frame(do.call(rbind, l))
+primCalculateSBO_1Table <- function(df1) {
+    V <- as.integer(count(df1))
+    mle <- numeric(V)
+    nextWord <- character(V)
+    for (i in 1:V) {
+        mle[i] <- df1$count[i] / V
+        nextWord[i] <- df1$ngram[i]
+    }
+    df <- data.frame(nextWord, mle, stringsAsFactors=FALSE)
     #keep for sbo only tghe ngrams with the highest probability
-    df %>% filter(mle==max(mle))
+    #todo: man könnte noch optimieren und nur im das ngram mit dem höchsten MLE sammeln...
+    #don't filter for the quiz 3 as i need the other probabilities
+    #df %>% filter(mle==max(mle))
 }
 
-#just calc the mle for known ngrams, no smoothing...
-calcMLE <- function(ngram, df_x, df_x_1) {
-    #print(ngram)
-    # helper calculations..
-    words <- unlist(strsplit(ngram, " "))
-    nextWord <- words[length(words)]
-    ngram_1 <- paste(words[-length(words)], collapse = " ")
-    c_x <- df_x$count[df_x$ngram==ngram]
-    c_x_1 <- df_x_1$count[df_x_1$ngram==ngram_1]
-    mle <- c_x / c_x_1
-    data.frame(ngram_1, nextWord, mle)
-}
 
-#just calc the mle for known 1-grams, no smoothing...
-calcMLE_1 <- function(nextWord, df_1, V) {
-    #print(ngram)
-    c_x <- df_1$count[df_1$ngram==nextWord]
-    mle <- c_x / V
-    data.frame(nextWord, mle)
-}
+# just calc the mle for known ngrams, no smoothing...
+# momentan nicht genutzt
+# calcMLE <- function(ngram, df_x, df_x_1) {
+#     #print(ngram)
+#     # helper calculations..
+#     words <- unlist(strsplit(ngram, " "))
+#     nextWord <- words[length(words)]
+#     ngram_1 <- paste(words[-length(words)], collapse = " ")
+#     c_x <- df_x$count[df_x$ngram==ngram]
+#     c_x_1 <- df_x_1$count[df_x_1$ngram==ngram_1]
+#     mle <- c_x / c_x_1
+#     data.frame(ngram_1, nextWord, mle)
+# }
+
+# just calc the mle for known 1-grams, no smoothing...
+# momentan nicht genutzt...
+# calcMLE_1 <- function(nextWord, df_1, V) {
+#     #print(ngram)
+#     c_x <- df_1$count[df_1$ngram==nextWord]
+#     mle <- c_x / V
+#     data.frame(nextWord, mle)
+# }
 
 
 #
 # ----------------- La Place Smoothing ---------
 #
+
+### approach
+## 1. Use Markov chains to calculate the Maximum Likelihood estimate 
+##    P(C|AB) = count(ABC)/count(AB)
+##
+## 2. For previous terms whose count is 0, perform Laplace Add - 1 smoothing 
+##    Padd-1(C|AB) = (count(ABC) + 1)/(count(AB) + V)
+##
+## V is the number of unique n-1 grams you have in the corpus
+## MLE = (Count(n grams) + 1)/ (Count(n-1 grams) + V)
+###
+
+calculateMLE <- function(tdm_n, tdm_n_1, minFreq=5 ) {
+    df_n <- getTermCountDF(tdm_n, minFreq)
+    df_n_1 <- getTermCountDF(tdm_n_1, minFreq)
+    primCalculateMLE(df_n, df_n_1)
+}
+
+tbd_primCalculateMLE <- function(df_n, df_n_1) {
+    ngram <- df_n[1,]$ngram
+    ngram_1 <- paste(unlist(strsplit(ngram, " "))[-1], collapse = " ")
+    V <- as.integer(count(df_n_1))
+    
+    mle <- (df_n$count[df_n$ngram==ngram] + 1) / (df_n_1$count[df_n_1$ngram==ngram_1] + V)
+    mle
+    lapply(df_n, calcMLE)
+    
+}
+
+testCalcMLE <- function(df_n, df_n_1) {
+    V <- as.integer(count(df_n_1))
+    p <- lapply(df_n$ngram, calcMLE, df_n, df_n_1,V)
+    df_n$p = unlist(p)
+    df_n
+}
 
 #calc mle and use laplace smoothing...
 calcMLELaPlace <- function(ngram, df_x, df_x_1, V) {

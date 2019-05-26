@@ -1,26 +1,35 @@
 loadCorpusInMem <- function(dir) {
+    corpus(readtext(paste0(dir, "/*")))
+}
+
+loadTMCorpusInMem <- function(dir) {
     textCorpus <- VCorpus(DirSource(dir),
-                    readerControl = list(reader = readPlain,
-                                         language = "en_US",
-                                         load = TRUE))
+                          readerControl = list(reader = readPlain,
+                                               language = "en_US",
+                                               load = TRUE))
     textCorpus
 }
 
 loadTestCorpus <- function() {
-    loadCorpusInMem("data/test")
+    loadTMCorpusInMem("data/test")
 }
 
 loadSampleCorpus <- function() {
-    loadCorpusInMem("data/samples")
+    loadTMCorpusInMem("data/samples")
 }
 
 loadFullCorpus <- function() {
-    loadCorpusInMem("data/final/en_US")
+    loadTMCorpusInMem("data/final/en_US")
 }
 
-filterProfanityWords <- function(corpus) {
-    tm_map(corpus, FUN = removeWords, getProfanityWords())
+persistCorpus <- function(tokens, corpName) {
+    saveRDS(tokens,  file=paste0("data/corpus/", corpName, ".rds"))
 }
+
+loadPersistedCorpus <- function(corpName) {
+    readRDS(file=paste0("data/corpus/", corpName, ".rds"))
+}
+
 
 maxChars <- function(textDocument) {
     l <- lapply(textDocument$content, nchar)
@@ -28,77 +37,156 @@ maxChars <- function(textDocument) {
     l[i]
 }
 
-allStepsWithSampleData <- function() {
-    c <- loadSampleCorpus()
-#    c <- tm_map(c, FUN = stemDocument)
-    c <- filterProfanityWords(c)
-    c <- tm_map(c, FUN = stripWhitespace)
-    c <- tm_map(c, FUN = content_transformer(tolower))
-    c <- tm_map(c, FUN = removePunctuation, preserve_intra_word_contractions = TRUE, preserve_intra_word_dashes = TRUE, ucp=TRUE)
-    c <- tm_map(c, FUN = removeNumbers)
-    cm <- VCorpus(VectorSource(c(c[[1]]$content, c[[2]]$content, c[[3]]$content)))
-    cm
-    
+prepareSampleCorpus <- function() {
+    flog.trace("prepareSampleCorpus")
+    primPrepareCorpus(loadSampleCorpus)
 }
 
-allStepsWithFullData <- function() {
-    c <- loadFullCorpus()
-    #    c <- tm_map(c, FUN = stemDocument)
-    c <- filterProfanityWords(c)
-    c <- tm_map(c, FUN = stripWhitespace)
-    c <- tm_map(c, FUN = content_transformer(tolower))
-    c <- tm_map(c, FUN = removePunctuation, preserve_intra_word_contractions = TRUE, preserve_intra_word_dashes = TRUE, ucp=TRUE)
-    c <- tm_map(c, FUN = removeNumbers)
-    cm <- VCorpus(VectorSource(c(c[[1]]$content, c[[2]]$content, c[[3]]$content)))
-    cm
-    
+prepareFullCorpus <- function() {
+    flog.trace("prepareFullCorpus")
+    primPrepareCorpus(loadFullCorpus)
 }
 
-allStepsWithTestData <- function() {
+prepareTestCorpus <- function() {
+    flog.trace("prepareTestCorpus")
+    primPrepareTestCorpus()
+}
+
+primPrepareCorpus <- function(dataLoadFunction) {
+    
+    c <- dataLoadFunction()
+    c <- tm_map(c, FUN = removeWords, myStopwords())
+    cm <- VCorpus(VectorSource(c(c[[1]]$content, c[[2]]$content, c[[3]]$content)))
+    corp <- corpus(cm)
+    #corp <- dataLoadFunction()
+    corp <- corpus_reshape(corp, to = c("sentences"), use_docvars = FALSE)
+    corp <- corpus(texts(corp, groups = rep(1, ndoc(corp))))
+    tokens <- tokens(corp, what = "sentence")
+    as.character(tokens)
+}
+
+primPrepareTestCorpus <- function() {
+    
     c <- loadTestCorpus()
-#    c <- tm_map(c, FUN = stemDocument)
-    c <- filterProfanityWords(c)
-    c <- tm_map(c, FUN = stripWhitespace)
-    c <- tm_map(c, FUN = content_transformer(tolower))
-    c <- tm_map(c, FUN = removePunctuation, preserve_intra_word_contractions = TRUE, preserve_intra_word_dashes = TRUE, ucp=TRUE)
-    c <- tm_map(c, FUN = removeNumbers)
+    c <- tm_map(c, FUN = removeWords, myStopwords())
     cm <- VCorpus(VectorSource(c(c[[1]]$content)))
-    cm
-    
+    corp <- corpus(cm)
+    #corp <- dataLoadFunction()
+    corp <- corpus_reshape(corp, to = c("sentences"), use_docvars = FALSE)
+    corp <- corpus(texts(corp, groups = rep(1, ndoc(corp))))
+    tokens <- tokens(corp, what = "sentence")
+    as.character(tokens)
 }
 
-getTermCountDF <- function(tdm, minFreq=10) {
-    df <- (tdm[findFreqTerms(tdm,minFreq),] %>%
-                   as.matrix() %>%
-                   rowSums() %>% sort(decreasing = TRUE)) %>% as.data.frame()
-    df <- tibble::rownames_to_column(df, "ngram")
-    colnames(df) <- c("ngram", "count")
+# primPrepareCorpus <- function(dataLoadFunction) {
+#     corp <- dataLoadFunction()
+#     corp <- corpus_reshape(corp, to = c("sentences"), use_docvars = FALSE)
+#     corp <- corpus(texts(corp, groups = rep(1, ndoc(corp))))
+# 
+#     tokens <- tokens(corp, what = "sentence")
+#     
+#     #das bringt hier nichts, da ich noch Sätze habe!
+#     # tokens <- tokens_remove(tokens, stopwords("en"))
+#     # tokens <- tokens_remove(tokens, getProfanityWords())
+#     as.character(tokens)
+# }
+
+# primPrepareCorpus2 <- function(dataLoadFunction) {
+#     corp <- dataLoadFunction()
+#     corp <- corpus_reshape(corp, to = c("sentences"), use_docvars = FALSE)
+#     corp <- corpus(texts(corp, groups = rep(1, ndoc(corp))))
+#     
+#     tokens <- tokens(corp, what = "sentence")
+#     
+#     tokens <- tokens(tokens, remove_numbers=TRUE, remove_symbols=TRUE, remove_hyphens=FALSE, what=c("fasterword"))
+#     tokens <- tokens_remove(tokens, myStopwords())
+#     
+#     
+#     
+#     #das bringt hier nichts, da ich noch Sätze habe!
+#     # tokens <- tokens_remove(tokens, stopwords("en"))
+#     # tokens <- tokens_remove(tokens, getProfanityWords())
+#     as.character(tokens)
+# }
+
+
+# primPrepareCorpus <- function(dataLoadFunction) {
+#     corp <- dataLoadFunction()
+#     corp <- corpus_reshape(corp, to = c("sentences"), use_docvars = FALSE)
+#     corp <- corpus(texts(corp, groups = rep(1, ndoc(corp))))
+#     tok <- tokens(corp, remove_numbers=TRUE, remove_punct=TRUE, remove_symbols=TRUE, remove_hyphens=FALSE, remove_twitter=TRUE, what=c("fasterword"))
+#     tok <- tokens_tolower(tok, keep_acronyms = TRUE)
+#     tok <- tokens_remove(tok, getProfanityWords())
+#     #tok <- tokens_remove(tok, pattern="^[^a-zA-Z]|[^a-zA-Z]$", valuetype="regex", padding=TRUE)
+#     tok
+# }
+
+myStopwords <- function() {
+    c(getProfanityWords(),stopwords("en"))
+}
+
+# getDocFeatureMatrix <- function(tokens, n) {
+#     tokens %>%
+#         tokens(remove_numbers=TRUE, remove_punct=TRUE, remove_symbols=TRUE, remove_hyphens=FALSE, remove_twitter=TRUE) %>%
+#         tokens_remove("\\p{P}", valuetype = "regex", padding = TRUE) %>%
+#         tokens_remove(myStopwords(), padding  = TRUE) %>%
+#         tokens_ngrams(n = n, concatenator = " ") %>%
+#         dfm()
+# }
+
+getDocFeatureMatrix <- function(tokens, n) {
+    dfm <- dfm(tokens, remove_numbers=TRUE, remove_punct=TRUE, remove_symbols=TRUE, remove_hyphens=FALSE, remove_twitter=TRUE, ngram=n, concatenator = " ")
+    
+    # feat <- featnames(dfm)
+    # feat_split <- stringi::stri_split_fixed(feat, " ")
+    # feat_stop <- feat[sapply(feat_split, function(x) any(x %in% myStopwords()))]
+    # 
+    # dfmClean <- dfm_remove(dfm, feat_stop)
+    # dfmClean 
+
+}
+
+# getDocFeatureMatrix <- function(tokens, ngram) {
+#     dfm(tokens_ngrams(tokens, ngram, concatenator = " "))
+#     
+# }
+
+getTermCountDF <- function(dfm, minFreq=10) {
+    dfmt <- dfm_trim(dfm, min_termfreq = minFreq)
+    tf <- topfeatures(dfmt, Inf)
+    df <- data.frame(ngram=names(tf), count=tf, stringsAsFactors = FALSE, row.names = NULL)
+    flog.trace(paste("getTermCountDF - count: ", length(tf)))
     df
 }
 
-listMostFrequentTerms <- function(tdm, numTerms=10, minFreq=100, ngram="n") {
-    ft <- (tdm[findFreqTerms(tdm,minFreq),] %>%
-               as.matrix() %>%
-               rowSums() %>% sort(decreasing = TRUE)) [1:numTerms]
-    as.matrix(ft)
-} 
+# getTermCountDF <- function(dfm, minFreq=10) {
+#     dfmt <- dfm_trim(dfm, min_termfreq = minFreq)
+#     dfmt <- dfm_sort(dfmt, margin=c("features"))
+#     tripList <- convert(dfmt, to = "tripletlist")
+#     df <- data.frame(ngram=tripList$feature, count=tripList$frequency, stringsAsFactors = FALSE)
+#     df
+# }
 
-analyseFrequentTerms <- function(tdm, numTerms=10, minFreq=100, ngram="n") {
-    ft <- (tdm[findFreqTerms(tdm,minFreq),] %>%
-                as.matrix() %>%
-                rowSums() %>% sort(decreasing = TRUE)) [1:numTerms]
-    barplot(ft, las=2, cex.names = 1.0, main= paste("top", numTerms, ngram, "-grams", sep = " "))
-}
+# listMostFrequentTerms <- function(tdm, numTerms=10, minFreq=100, ngram="n") {
+#     ft <- (tdm[findFreqTerms(tdm,minFreq),] %>%
+#                as.matrix() %>%
+#                rowSums() %>% sort(decreasing = TRUE)) [1:numTerms]
+#     as.matrix(ft)
+# } 
+# 
+# analyseFrequentTerms <- function(tdm, numTerms=10, minFreq=100, ngram="n") {
+#     ft <- (tdm[findFreqTerms(tdm,minFreq),] %>%
+#                 as.matrix() %>%
+#                 rowSums() %>% sort(decreasing = TRUE)) [1:numTerms]
+#     barplot(ft, las=2, cex.names = 1.0, main= paste("top", numTerms, ngram, "-grams", sep = " "))
+# }
+# 
+# plotTopFrequentTerms <- function(tdm, frequency=100, ngram="n") {
+#     ft <- (tdm[findFreqTerms(tdm,10),] %>%
+#                as.matrix() %>%
+#                rowSums() %>% sort(decreasing = TRUE)) [1:100]
+#     plot(ft, main=paste("top", frequency, "frequent", ngram, "-grams"), ylab="frequency", xlab="terms with decreasing frequency")
+# }
 
-plotTopFrequentTerms <- function(tdm, frequency=100, ngram="n") {
-    ft <- (tdm[findFreqTerms(tdm,10),] %>%
-               as.matrix() %>%
-               rowSums() %>% sort(decreasing = TRUE)) [1:100]
-    plot(ft, main=paste("top", frequency, "frequent", ngram, "-grams"), ylab="frequency", xlab="terms with decreasing frequency")
-}
 
-getTermDocMatrix <- function(corpus, ngram) {
-    TermDocumentMatrix(corpus,list(wordLengths=c(1, Inf), tokenize = 
-                                   function(x) NGramTokenizer(x, Weka_control(min=ngram, max=ngram, delimiters=" \r\n\t.,;:\"()?!"))))
-}
 

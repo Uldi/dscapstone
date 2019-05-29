@@ -5,6 +5,7 @@ initLibraries <- function() {
     library(quanteda)
     library(readtext)
     library(futile.logger)
+    library(parallel)
     flog.threshold(TRACE)
 }
 
@@ -29,13 +30,13 @@ setupSampleNLP <- function() {
     sbo
 }
 
-setupFullNLP <- function() {
+setupFullNLP <- function(minFreq=10, corpName="full") {
     initLibraries()
-    flog.info("setupFullNLP: start")
+    flog.info("setupFullNLP: start - minFreq = %i", minFreq)
     tokens <- prepareFullCorpus()
-    persistCorpus(tokens, "full10")
+    persistCorpus(tokens, corpName)
     flog.trace("setupFullNLP: corpus prepared")
-    sbo <- primSetupNLP(tokens, 10)
+    sbo <- primSetupNLP(tokens, minFreq)
     flog.info("setupFullNLP: end")
     sbo
 }
@@ -51,8 +52,13 @@ primSetupNLP <- function(tokens, minFreq=1) {
     flog.trace("primSetupNLP: getDocFeatureMatrix 4")
     dfm4 <- getDocFeatureMatrix(tokens, 4)
     
+    saveRDS(list(dfm1, dfm2, dfm3, dfm4),  file="data/temp/dfms.rds")
+    
     flog.trace("primSetupNLP: getSBOTables")
     getSBOTables(dfm1, dfm2, dfm3, dfm4, minFreq)
+    
+    # flog.trace("primSetupNLP: getSBOTablesParallel")
+    # getSBOTablesParallel(dfm1, dfm2, dfm3, dfm4, minFreq)
 }
 
 
@@ -114,11 +120,13 @@ predictSBONLP <- function(ngramSBOTables, text) {
     #idee wäre hier mit dem tokenizer package den Input zu zerstückeln...
     words <- c()
     if (nchar(trimws(text)) > 0) {
-        inputSubSentences <- unlist(text %>% tokenize_sentences(simplify = TRUE) %>% tokenize_regex(", "))
-        subSentence <- last(inputSubSentences)
-        #ToDo: Achtung ein neuer Satz muss mit Grossbuchstaben oder Zahl beginnen!
-        print(subSentence)
-        words <- subSentence %>% tokenize_words(simplify = TRUE)
+        
+        words <- removeStopwords(text)
+        # inputSubSentences <- unlist(text %>% tokenize_sentences(simplify = TRUE) %>% tokenize_regex(", "))
+        # subSentence <- last(inputSubSentences)
+        # #ToDo: Achtung ein neuer Satz muss mit Grossbuchstaben oder Zahl beginnen!
+        # print(subSentence)
+        # words <- subSentence %>% tokenize_words(simplify = TRUE)
     }
     
     #Algorithmus:
@@ -188,6 +196,10 @@ lookupNGram <- function(sboTable, ngram) {
     rows
 }
 
+lookupDfmForMatch <- function(dfms, root, words, n) {
+    topfeatures(dfm_match(dfms[[c]], c(paste(root, words[1]), paste(root, words[2]), paste(root, words[3]), paste(root, words[4]))))
+}
+
 
 getSBOTables <-  function(dfm1, dfm2, dfm3, dfm4, minFreq=5) {
     flog.trace("getSBOTables: getTermCountDF 4")
@@ -198,6 +210,8 @@ getSBOTables <-  function(dfm1, dfm2, dfm3, dfm4, minFreq=5) {
     df_2 <- getTermCountDF(dfm2, minFreq)
     flog.trace("getSBOTables: getTermCountDF 1")
     df_1 <- getTermCountDF(dfm1, minFreq)
+    
+    saveRDS(list(df_1, df_2, df_3, df_4),  file="data/temp/tcdf.rds")
 
     flog.trace("getSBOTables: primCalculateSBOTables 4")
     sdf_4 <- primCalculateSBOTables(df_4, df_3)
@@ -207,7 +221,67 @@ getSBOTables <-  function(dfm1, dfm2, dfm3, dfm4, minFreq=5) {
     sdf_2 <- primCalculateSBOTables(df_2, df_1)
     flog.trace("getSBOTables: primCalculateSBO_1Table 1")
     sdf_1 <- primCalculateSBO_1Table(df_1)
-    list(sdf_1, sdf_2, sdf_3, sdf_4)
+    tsbo <- list(sdf_1, sdf_2, sdf_3, sdf_4)
+    
+    saveRDS(tsbo,  file="data/temp/tsbo.rds")
+    
+    tsbo
+}
+
+getSBOTablesParallel <-  function(dfm1, dfm2, dfm3, dfm4, minFreq=5) {
+    flog.trace("getSBOTables: getTermCountDF 4")
+    df_4 <- getTermCountDF(dfm4, minFreq)
+    flog.trace("getSBOTables: getTermCountDF 3")
+    df_3 <- getTermCountDF(dfm3, minFreq)
+    flog.trace("getSBOTables: getTermCountDF 2")
+    df_2 <- getTermCountDF(dfm2, minFreq)
+    flog.trace("getSBOTables: getTermCountDF 1")
+    df_1 <- getTermCountDF(dfm1, minFreq)
+    
+    saveRDS(list(df_1, df_2, df_3, df_4),  file="data/temp/tcdf.rds")
+    
+    flog.trace("getSBOTables: primCalculateSBOTables in parallel - start")
+    cl <- makeForkCluster(3)
+    dfPairs <- list(list(df_1, df_2), list(df_2, df_3), list(df_3, df_4))
+    sdfList <- clusterApply(cl, dfPairs, function(df) {
+        primCalculateSBOTables(df[[2]], df[[1]])
+    })
+    flog.trace("getSBOTables: primCalculateSBOTables in parallel - end")
+    stopCluster(cl)
+
+    flog.trace("getSBOTables: primCalculateSBO_1Table 1")
+    sdf_1 <- primCalculateSBO_1Table(df_1)
+    
+    tsbo <- list(sdf_1, sdfList[[1]], sdfList[[2]], sdfList[[3]])
+    
+    saveRDS(tsbo,  file="data/temp/tsbo.rds")
+    
+    tsbo
+}
+
+getSBOTablesParallel1 <-  function(l) {
+    df_1 <- l[[1]]
+    df_2 <- l[[2]]
+    df_3 <- l[[3]]
+    df_4 <- l[[4]]
+    
+    flog.trace("getSBOTables: primCalculateSBOTables in parallel - start")
+    cl <- makeForkCluster(3)
+    dfPairs <- list(list(df_1, df_2), list(df_2, df_3), list(df_3, df_4))
+    sdfList <- clusterApply(cl, dfPairs, function(df) {
+        primCalculateSBOTables(df[[2]], df[[1]])
+    })
+    flog.trace("getSBOTables: primCalculateSBOTables in parallel - end")
+    stopCluster(cl)
+    
+    flog.trace("getSBOTables: primCalculateSBO_1Table 1")
+    sdf_1 <- primCalculateSBO_1Table(df_1)
+    
+    tsbo <- list(sdf_1, sdfList[[1]], sdfList[[2]], sdfList[[3]])
+    
+    saveRDS(tsbo,  file="data/temp/tsbo.rds")
+    
+    tsbo
 }
 
 
@@ -217,6 +291,8 @@ primCalculateSBOTables <- function(df_n, df_n_1) {
     nextWord <- character(V)
     ngram_1 <- character(V)
     for (i in 1:V) {
+        if ((i %% 100000) == 0)  {flog.trace("primCalculateSBOTables - step %i", i)}
+    
         i_ngram <- df_n$ngram[i]
         words <- unlist(strsplit(i_ngram, " "))
         i_nextWord <- words[length(words)]
@@ -240,6 +316,7 @@ primCalculateSBO_1Table <- function(df1) {
     mle <- numeric(V)
     nextWord <- character(V)
     for (i in 1:V) {
+        if ((i %% 100000) == 0)  {flog.trace("primCalculateSBO_1Table - step %i", i)}
         mle[i] <- df1$count[i] / V
         nextWord[i] <- df1$ngram[i]
     }

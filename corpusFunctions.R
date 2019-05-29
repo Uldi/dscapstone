@@ -53,12 +53,14 @@ prepareTestCorpus <- function() {
 }
 
 primPrepareCorpus <- function(dataLoadFunction) {
-    
+    flog.trace("primPrepareCorpus - laodData")
     c <- dataLoadFunction()
+    flog.trace("primPrepareCorpus - remove stopwords")
     c <- tm_map(c, FUN = removeWords, myStopwords())
     cm <- VCorpus(VectorSource(c(c[[1]]$content, c[[2]]$content, c[[3]]$content)))
     corp <- corpus(cm)
     #corp <- dataLoadFunction()
+    flog.trace("primPrepareCorpus - quanteda in action")
     corp <- corpus_reshape(corp, to = c("sentences"), use_docvars = FALSE)
     corp <- corpus(texts(corp, groups = rep(1, ndoc(corp))))
     tokens <- tokens(corp, what = "sentence")
@@ -122,7 +124,15 @@ primPrepareTestCorpus <- function() {
 # }
 
 myStopwords <- function() {
-    c(getProfanityWords(),stopwords("en"))
+    # c(getProfanityWords(),stopwords("en"))
+    getProfanityWords()
+}
+
+removeStopwords <- function(sentence) {
+    tok <- tokens(sentence, remove_numbers=TRUE, remove_punct=TRUE, remove_symbols=TRUE, remove_hyphens=FALSE, remove_twitter=TRUE)
+    tok <- tokens_tolower(tok, keep_acronyms = TRUE)
+    tok <- tokens_remove(tok, myStopwords())
+    as.character(tok)
 }
 
 # getDocFeatureMatrix <- function(tokens, n) {

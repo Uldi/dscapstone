@@ -18,10 +18,11 @@ setupTestNLP <- function() {
 #    Rprof(NULL)
 }
 
-setupSampleNLP <- function() {
+setupSampleNLP <- function(corpName="sample") {
     initLibraries()
     flog.info("setupSampleNLP: start")
     tokens <- prepareSampleCorpus()
+    persistCorpus(tokens, corpName)
     flog.trace("setupSampleNLP: corpus prepared")
     Rprof("rprof.out", append=FALSE)
     sbo <- primSetupNLP(tokens, 5)
@@ -51,6 +52,9 @@ primSetupNLP <- function(tokens, minFreq=1) {
     dfm3 <- getDocFeatureMatrix(tokens, 3)
     flog.trace("primSetupNLP: getDocFeatureMatrix 4")
     dfm4 <- getDocFeatureMatrix(tokens, 4)
+    # flog.trace("4grams: before sw removal: num features %i", length(featnames(dfm4)))
+    # dfm4 <- removeNGramEndingWithStopwords(dfm4)
+    # flog.trace("4grams: after sw removal: num features %i", length(featnames(dfm4)))
     
     saveRDS(list(dfm1, dfm2, dfm3, dfm4),  file="data/temp/dfms.rds")
     
@@ -228,63 +232,6 @@ getSBOTables <-  function(dfm1, dfm2, dfm3, dfm4, minFreq=5) {
     tsbo
 }
 
-getSBOTablesParallel <-  function(dfm1, dfm2, dfm3, dfm4, minFreq=5) {
-    flog.trace("getSBOTables: getTermCountDF 4")
-    df_4 <- getTermCountDF(dfm4, minFreq)
-    flog.trace("getSBOTables: getTermCountDF 3")
-    df_3 <- getTermCountDF(dfm3, minFreq)
-    flog.trace("getSBOTables: getTermCountDF 2")
-    df_2 <- getTermCountDF(dfm2, minFreq)
-    flog.trace("getSBOTables: getTermCountDF 1")
-    df_1 <- getTermCountDF(dfm1, minFreq)
-    
-    saveRDS(list(df_1, df_2, df_3, df_4),  file="data/temp/tcdf.rds")
-    
-    flog.trace("getSBOTables: primCalculateSBOTables in parallel - start")
-    cl <- makeForkCluster(3)
-    dfPairs <- list(list(df_1, df_2), list(df_2, df_3), list(df_3, df_4))
-    sdfList <- clusterApply(cl, dfPairs, function(df) {
-        primCalculateSBOTables(df[[2]], df[[1]])
-    })
-    flog.trace("getSBOTables: primCalculateSBOTables in parallel - end")
-    stopCluster(cl)
-
-    flog.trace("getSBOTables: primCalculateSBO_1Table 1")
-    sdf_1 <- primCalculateSBO_1Table(df_1)
-    
-    tsbo <- list(sdf_1, sdfList[[1]], sdfList[[2]], sdfList[[3]])
-    
-    saveRDS(tsbo,  file="data/temp/tsbo.rds")
-    
-    tsbo
-}
-
-getSBOTablesParallel1 <-  function(l) {
-    df_1 <- l[[1]]
-    df_2 <- l[[2]]
-    df_3 <- l[[3]]
-    df_4 <- l[[4]]
-    
-    flog.trace("getSBOTables: primCalculateSBOTables in parallel - start")
-    cl <- makeForkCluster(3)
-    dfPairs <- list(list(df_1, df_2), list(df_2, df_3), list(df_3, df_4))
-    sdfList <- clusterApply(cl, dfPairs, function(df) {
-        primCalculateSBOTables(df[[2]], df[[1]])
-    })
-    flog.trace("getSBOTables: primCalculateSBOTables in parallel - end")
-    stopCluster(cl)
-    
-    flog.trace("getSBOTables: primCalculateSBO_1Table 1")
-    sdf_1 <- primCalculateSBO_1Table(df_1)
-    
-    tsbo <- list(sdf_1, sdfList[[1]], sdfList[[2]], sdfList[[3]])
-    
-    saveRDS(tsbo,  file="data/temp/tsbo.rds")
-    
-    tsbo
-}
-
-
 primCalculateSBOTables <- function(df_n, df_n_1) {
     V <- as.integer(count(df_n))
     mle <- numeric(V)
@@ -305,9 +252,21 @@ primCalculateSBOTables <- function(df_n, df_n_1) {
         ngram_1[i] <- i_ngram_1
     }
     df <- data.frame(ngram_1, nextWord, mle)
+
+    df <- df %>% group_by(ngram_1)
+    
+    #filter ngrams die auf ein Stopword enden...
+    flog.trace("primCalculateSBOTables - nrows before filtering: %i", nrow(df))
+    sw <- stopwords("en")
+    df <- df %>% filter(!(nextWord %in% sw))
+    flog.trace("primCalculateSBOTables - nrows after filtering stopwords: %i", nrow(df))
+    
     #keep for sbo only the ngrams with the highest probability per ngram_1
     #don't filter for the quiz 3 as i need the other probabilities
-    df %>% group_by(ngram_1) #%>% filter(mle==max(mle))
+    # df <- df %>% filter(mle==max(mle))
+    # flog.trace("primCalculateSBOTables - nrows after filtering non max mle: %i", nrow(df))
+    
+    df
 }
 
 #
@@ -321,10 +280,19 @@ primCalculateSBO_1Table <- function(df1) {
         nextWord[i] <- df1$ngram[i]
     }
     df <- data.frame(nextWord, mle, stringsAsFactors=FALSE)
+    
+    #filter ngrams die auf ein Stopword enden...
+    flog.trace("primCalculateSBO_1Table - nrows before filtering: %i", nrow(df))
+    sw <- stopwords("en")
+    df <- df %>% filter(!(nextWord %in% sw))
+    flog.trace("primCalculateSBO_1Table - nrows after filtering stopwords: %i", nrow(df))
+    
     #keep for sbo only tghe ngrams with the highest probability
     #todo: man könnte noch optimieren und nur im das ngram mit dem höchsten MLE sammeln...
     #don't filter for the quiz 3 as i need the other probabilities
-    #df %>% filter(mle==max(mle))
+    #df <- df %>% filter(mle==max(mle))
+    # flog.trace("primCalculateSBO_1Table - nrows after filtering non max mle: %i", nrow(df))
+    df
 }
 
 

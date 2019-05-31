@@ -20,7 +20,7 @@ shinyServer(function(input, output, session) {
     flog.trace(getwd())
     #ngramSBOTables <- setupTestNLP()
     #ngramSBOTables <- loadSBOModel("sample")
-    ngramSBOTables <- loadSBOModel("full25")
+    ngramSBOTables <- loadSBOModel("fullNoSW10")
     text <- ""
     flog.info("load NLP prediction model - completed")
     

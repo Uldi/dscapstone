@@ -80,49 +80,6 @@ primPrepareTestCorpus <- function() {
     as.character(tokens)
 }
 
-# primPrepareCorpus <- function(dataLoadFunction) {
-#     corp <- dataLoadFunction()
-#     corp <- corpus_reshape(corp, to = c("sentences"), use_docvars = FALSE)
-#     corp <- corpus(texts(corp, groups = rep(1, ndoc(corp))))
-# 
-#     tokens <- tokens(corp, what = "sentence")
-#     
-#     #das bringt hier nichts, da ich noch Sätze habe!
-#     # tokens <- tokens_remove(tokens, stopwords("en"))
-#     # tokens <- tokens_remove(tokens, getProfanityWords())
-#     as.character(tokens)
-# }
-
-# primPrepareCorpus2 <- function(dataLoadFunction) {
-#     corp <- dataLoadFunction()
-#     corp <- corpus_reshape(corp, to = c("sentences"), use_docvars = FALSE)
-#     corp <- corpus(texts(corp, groups = rep(1, ndoc(corp))))
-#     
-#     tokens <- tokens(corp, what = "sentence")
-#     
-#     tokens <- tokens(tokens, remove_numbers=TRUE, remove_symbols=TRUE, remove_hyphens=FALSE, what=c("fasterword"))
-#     tokens <- tokens_remove(tokens, myStopwords())
-#     
-#     
-#     
-#     #das bringt hier nichts, da ich noch Sätze habe!
-#     # tokens <- tokens_remove(tokens, stopwords("en"))
-#     # tokens <- tokens_remove(tokens, getProfanityWords())
-#     as.character(tokens)
-# }
-
-
-# primPrepareCorpus <- function(dataLoadFunction) {
-#     corp <- dataLoadFunction()
-#     corp <- corpus_reshape(corp, to = c("sentences"), use_docvars = FALSE)
-#     corp <- corpus(texts(corp, groups = rep(1, ndoc(corp))))
-#     tok <- tokens(corp, remove_numbers=TRUE, remove_punct=TRUE, remove_symbols=TRUE, remove_hyphens=FALSE, remove_twitter=TRUE, what=c("fasterword"))
-#     tok <- tokens_tolower(tok, keep_acronyms = TRUE)
-#     tok <- tokens_remove(tok, getProfanityWords())
-#     #tok <- tokens_remove(tok, pattern="^[^a-zA-Z]|[^a-zA-Z]$", valuetype="regex", padding=TRUE)
-#     tok
-# }
-
 myStopwords <- function() {
     # c(getProfanityWords(),stopwords("en"))
     getProfanityWords()
@@ -146,19 +103,15 @@ removeStopwords <- function(sentence) {
 
 getDocFeatureMatrix <- function(tokens, n) {
     dfm <- dfm(tokens, remove_numbers=TRUE, remove_punct=TRUE, remove_symbols=TRUE, remove_hyphens=FALSE, remove_twitter=TRUE, ngram=n, concatenator = " ")
-    
-    # feat <- featnames(dfm)
-    # feat_split <- stringi::stri_split_fixed(feat, " ")
-    # feat_stop <- feat[sapply(feat_split, function(x) any(x %in% myStopwords()))]
-    # 
-    # dfmClean <- dfm_remove(dfm, feat_stop)
-    # dfmClean 
-
 }
 
-# getDocFeatureMatrix <- function(tokens, ngram) {
-#     dfm(tokens_ngrams(tokens, ngram, concatenator = " "))
-#     
+#macht nur Sinn bei den 4-grams, ansonsten kann der SBO nicht mehr sinnvoll berechnet werden, div durch 0!
+# removeNGramEndingWithStopwords <- function(dfm) {
+#     sw <- stopwords("en")
+#     for (w in sw) {
+#         dfm <- dfm_remove(dfm, pattern=paste0(" ",w ,"$"), valuetype="regex")
+#     }
+#     dfm
 # }
 
 getTermCountDF <- function(dfm, minFreq=10) {
@@ -168,14 +121,6 @@ getTermCountDF <- function(dfm, minFreq=10) {
     flog.trace(paste("getTermCountDF - count: ", length(tf)))
     df
 }
-
-# getTermCountDF <- function(dfm, minFreq=10) {
-#     dfmt <- dfm_trim(dfm, min_termfreq = minFreq)
-#     dfmt <- dfm_sort(dfmt, margin=c("features"))
-#     tripList <- convert(dfmt, to = "tripletlist")
-#     df <- data.frame(ngram=tripList$feature, count=tripList$frequency, stringsAsFactors = FALSE)
-#     df
-# }
 
 # listMostFrequentTerms <- function(tdm, numTerms=10, minFreq=100, ngram="n") {
 #     ft <- (tdm[findFreqTerms(tdm,minFreq),] %>%

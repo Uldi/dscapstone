@@ -1,0 +1,45 @@
+Ideen
+
+- SBO tables: da muss ich jeweils nur das wahrscheinlichste behalten --> done
+
+ndfG <- ndf %>% group_by(ngram_1) %>% filter(ngram_1=="sos", mle==max(mle))
+ndfG <- ndf %>% group_by(ngram_1) %>% filter(mle==max(mle))
+
+
+Todo Shiny App
+- Wahrscheinlichkeit und vor allem das n des ngrams ausgeben
+
+Todo
+- Profiling... --> siehe Unterlagen Intro to R
+- Sätze werden jetzt zusammen gemergt --> mehr ngrams!
+
+flog.trace("primSetupNLP: getDocFeatureMatrix 1")
+    dfm1 <- getDocFeatureMatrix(tokensFull, 1)
+    flog.trace("primSetupNLP: getDocFeatureMatrix 2")
+    dfm2 <- getDocFeatureMatrix(tokensFull, 2)
+    flog.trace("primSetupNLP: getDocFeatureMatrix 3")
+    dfm3 <- getDocFeatureMatrix(tokensFull, 3)
+    flog.trace("primSetupNLP: getDocFeatureMatrix 4")
+    dfm4 <- getDocFeatureMatrix(tokensFull, 4)
+    
+    flog.trace("primSetupNLP: getSBOTables")
+    getSBOTables(dfm1, dfm2, dfm3, dfm4, 1)
+    
+    
+    Ngrams - Full (incl. Stopwords)
+            4           3           2           1
+    1       63'555'736  42'578'634  13'912'853  823'153
+    5       902'195     1'795'880   1'454'768   164'496
+    10      313'674     767'926     755'132     106'372
+    25      82'159      262'618     330'031     63'648
+    
+    ohne Stopwords, profanity
+            4           3           2           1
+    1       40'698'045  40'580'300  20'076'031  789'372
+    5       67'289      378'538     1'413'450   162'168
+    10      16'920      120'849     604'260     105'101    
+    25      2'989       29'181      201'577     63'028
+    
+    
+    
+    

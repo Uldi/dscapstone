@@ -117,6 +117,12 @@ loadSBOModel <- function(modelName="model") {
 ######
 
 getSBOTables <-  function(dfm1, dfm2, dfm3, dfm4, minFreq=5) {
+    tcdfList <- buildTermCountDF(dfm1, dfm2, dfm3, dfm4, minFreq)
+    tsboList <- buildSBOTables(tcdfList[[1]], tcdfList[[2]], tcdfList[[3]], tcdfList[[4]])
+    tsboList
+}
+    
+buildTermCountDF <- function(dfm1, dfm2, dfm3, dfm4, minFreq=5) {
     flog.trace("getSBOTables: getTermCountDF 4")
     df_4 <- getTermCountDF(dfm4, minFreq)
     flog.trace("getSBOTables: getTermCountDF 3")
@@ -126,8 +132,18 @@ getSBOTables <-  function(dfm1, dfm2, dfm3, dfm4, minFreq=5) {
     flog.trace("getSBOTables: getTermCountDF 1")
     df_1 <- getTermCountDF(dfm1, minFreq)
     
-    saveRDS(list(df_1, df_2, df_3, df_4),  file="data/temp/tcdf.rds")
+    tcdfList <- list(df_1, df_2, df_3, df_4)
+    saveRDS(tcdfList,  file="data/temp/tcdf.rds")
+    tcdfList
+}
 
+#helper function
+restartBuildSBOTables <- function() {
+    tcdfList <- readRDS(file="data/temp/tcdf.rds")
+    buildSBOTables(tcdfList[[1]], tcdfList[[2]], tcdfList[[3]], tcdfList[[4]])
+}
+
+buildSBOTables <- function(df_1, df_2, df_3, df_4) {
     flog.trace("getSBOTables: primCalculateSBOTables 4")
     sdf_4 <- primCalculateSBOTables(df_4, df_3)
     flog.trace("getSBOTables: primCalculateSBOTables 3")
@@ -136,12 +152,13 @@ getSBOTables <-  function(dfm1, dfm2, dfm3, dfm4, minFreq=5) {
     sdf_2 <- primCalculateSBOTables(df_2, df_1)
     flog.trace("getSBOTables: primCalculateSBO_1Table 1")
     sdf_1 <- primCalculateSBO_1Table(df_1)
+    
     tsbo <- list(sdf_1, sdf_2, sdf_3, sdf_4)
-    
     saveRDS(tsbo,  file="data/temp/tsbo.rds")
-    
     tsbo
 }
+
+
 
 primCalculateSBOTables <- function(df_n, df_n_1) {
     V <- as.integer(count(df_n))
@@ -162,7 +179,7 @@ primCalculateSBOTables <- function(df_n, df_n_1) {
         nextWord[i] <- i_nextWord
         ngram_1[i] <- i_ngram_1
     }
-    df <- data.frame(ngram_1, nextWord, mle)
+    df <- data.frame(ngram_1, nextWord, mle, stringsAsFactors = FALSE)
 
     df <- df %>% group_by(ngram_1)
     

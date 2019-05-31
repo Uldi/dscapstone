@@ -13,6 +13,33 @@ test <- function(sboTables, nTests=0) {
     flog.info("test result: success count out of %i test: %i", i, successCount)
 }
 
+testQuiz2 <- function(sboTables){
+    sentence <- c("The guy in front of me just bought a pound of bacon, a bouquet, and a case of", "You’re the reason why I smile everyday. Can you follow me please? It would mean the", "Hey sunshine, can you follow me and make me the", "Very early observations on the Bills game: Offence still struggling but the", "Go on a romantic date at the", "Well I’m pretty sure my granny has some old bagpipes in her garage I’ll dust them on and be on my", "Ohhhhh #PointBreak is on tomorrow. Love that film and haven’t seen it in quite some", "After the ice bucket challenge Louis will push his long wet hair out of his eyes with his little", "Be grateful for the good times and keep the faith during the", "If this isn’t the cutest thing you’ve ever seen, then you must be")
+    choices <- c(c("prezels", "soda", "beer", "cheese"), c("world", "best", "most", "universe"), c("bluest", "smelliest", "saddest", "happiest"), c("crowd", "defense", "referees", "players"), c("mall", "grocery", "movies", "beach"), c("way", "horse", "motorcycle", "phone"), c("thing", "weeks", "time", "years"), c("fingers", "eyes", "ears", "toes"), c("worse", "bad", "hard", "sad"), c("asleep", "insensitive", "callous", "insane"))
+    solution <- c("beer", "world", "happiest", "defense", "beach", "way", "time", "fingers", "bad", "insane")
+    
+    sucCount <- 0
+    for(i in 1:length(sentences)) {
+        if (primQuizTest(sboTables, sentence[i], choices[i], solution[i])) sucCount <- sucCount + 1
+    }
+    flog.info("Quiz 2: success count out of %i tests: %i", i, sucCount)
+}
+
+primQuizTest <- function(sboTables, sentence, choices, solution) {
+    predictedWord <- primPredictSBONLP(sboTables, sentence)
+    flog.info("Quiz Test - sentence %s", sentence)
+    success <- predictedWord == solution
+    if (success) {
+        flog.info("Quiz Test - direct prediction successful - prediction: %s, solution: %s", predictedWord, solution)
+    } else {
+        flog.info("Quiz Test - direct prediction not successful - prediction: %s, solution: %s", predictedWord, solution)
+        
+        #todo indirect test
+    }
+    success
+    
+}
+
 createTestSamples <- function(sboTables, nTests=1000) {
     samples <- sample_n(sboTables[[4]], nTests)
     saveRDS(samples, file="data/testing/test4grams.rds")

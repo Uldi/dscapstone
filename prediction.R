@@ -8,14 +8,26 @@ initLibraries <- function() {
 }
 
 #predict using SBO approach
+#return orginial text appended with predicted word
 predictSBONLP <- function(ngramSBOTables, text) {
+    nextWord <- primPredictSBONLP(ngramSBOTables, text)
+    
+    #return orginial text appended with next word
+    trimws(paste(trimws(text), nextWord,sep = " "))
+}
+
+#predict using SBO approach
+#return predicted word
+primPredictSBONLP <- function(ngramSBOTables, text) {
     
     #ToDo
     #idee wäre hier mit dem tokenizer package den Input zu zerstückeln...
+    flog.trace("primPredictSBONLP - text to predict %s", text)
     words <- c()
     if (nchar(trimws(text)) > 0) {
         
         words <- removeStopwords(text)
+        flog.trace("primPredictSBONLP - text after removing stopwords: %s", paste(words, collapse = " "))
         # inputSubSentences <- unlist(text %>% tokenize_sentences(simplify = TRUE) %>% tokenize_regex(", "))
         # subSentence <- last(inputSubSentences)
         # #ToDo: Achtung ein neuer Satz muss mit Grossbuchstaben oder Zahl beginnen!
@@ -48,7 +60,7 @@ predictSBONLP <- function(ngramSBOTables, text) {
         flog.trace("4-gram: %s", last3Words)
         
         rows <- lookupNGram(ngramSBOTables[[4]], last3Words)
-        if (length(rows) > 0) {
+        if (nrow(rows) > 0) {
             nextWord <- rows[1,2]
             flog.trace("4-gram found: %s", nextWord)
         }
@@ -58,7 +70,7 @@ predictSBONLP <- function(ngramSBOTables, text) {
         flog.trace("3-gram: %s", last2Words)
         
         rows <- lookupNGram(ngramSBOTables[[3]], last2Words)
-        if(length(rows) > 0) {
+        if(nrow(rows) > 0) {
             nextWord <- rows[1,2]
             flog.trace("3-gram found: %s", nextWord)
         }
@@ -68,7 +80,7 @@ predictSBONLP <- function(ngramSBOTables, text) {
         flog.trace("2-gram: %s", lastWord)
         
         rows <- lookupNGram(ngramSBOTables[[2]], lastWord)
-        if(length(rows) > 0) {
+        if(nrow(rows) > 0) {
             nextWord <- rows[1,2]
             flog.trace("2-gram found: %s", nextWord)
         } 
@@ -81,8 +93,7 @@ predictSBONLP <- function(ngramSBOTables, text) {
         flog.trace("1-gram found: %s", nextWord)
     }
     
-    #return orginial text appended with next word
-    trimws(paste(trimws(text), nextWord,sep = " "))
+    nextWord
 }
 
 lookupNGram <- function(sboTable, ngram) {

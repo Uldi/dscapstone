@@ -81,8 +81,8 @@ primPrepareTestCorpus <- function() {
 }
 
 myStopwords <- function() {
-    c(getProfanityWords(),stopwords("en"))
-    # getProfanityWords()
+    #c(getProfanityWords(),stopwords("en"))
+    getProfanityWords()
 }
 
 removeStopwords <- function(sentence) {

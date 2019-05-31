@@ -138,8 +138,8 @@ buildTermCountDF <- function(dfm1, dfm2, dfm3, dfm4, minFreq=5) {
 }
 
 #helper function
-restartBuildSBOTables <- function() {
-    tcdfList <- readRDS(file="data/temp/tcdf.rds")
+restartBuildSBOTables <- function(file="tcdf.rds") {
+    tcdfList <- readRDS(file=paste0("data/temp/", file, ".rds"))
     buildSBOTables(tcdfList[[1]], tcdfList[[2]], tcdfList[[3]], tcdfList[[4]])
 }
 
@@ -220,6 +220,20 @@ primCalculateSBO_1Table <- function(df1) {
     #don't filter for the quiz 3 as i need the other probabilities
     #df <- df %>% filter(mle==max(mle))
     # flog.trace("primCalculateSBO_1Table - nrows after filtering non max mle: %i", nrow(df))
+    df
+}
+
+#helper function
+filterStopwordNGrams <- function(sboTable) {
+    sw <- stopwords("en")
+    df <- sboTable %>% mutate(ngram_1 = as.character(ngram_1), nextWord = as.character(nextWord))
+    df <- df %>% filter(!(nextWord %in% sw))
+    df
+}
+filterStopword1Grams <- function(sboTable) {
+    sw <- stopwords("en")
+    df <- sboTable %>% mutate(nextWord = as.character(nextWord))
+    df <- df %>% filter(!(nextWord %in% sw))
     df
 }
 

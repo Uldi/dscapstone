@@ -30,11 +30,47 @@ primQuizTest <- function(sboTables, sentence, choices, solution) {
     flog.info("Quiz Test - sentence %s", sentence)
     success <- predictedWord == solution
     if (success) {
-        flog.info("Quiz Test - direct prediction successful - prediction: %s, solution: %s", predictedWord, solution)
+        flog.info("*** Quiz Test - direct prediction successful - prediction: %s, solution: %s", predictedWord, solution)
     } else {
-        flog.info("Quiz Test - direct prediction not successful - prediction: %s, solution: %s", predictedWord, solution)
+        flog.info("*** Quiz Test - direct prediction not successful - prediction: %s, solution: %s", predictedWord, solution)
+    
+        #indirect 4gram test
+        words <- removeStopwords(sentence)
+        numWords <- length(words)
         
-        #todo indirect test
+        ngram3 <- paste(words[(numWords-2): numWords], collapse = " ")
+        flog.info("Quiz Test - doing indirect 4gram prediction with: %s", ngram3)
+        r <- lookupNGram(sboTables[[4]], ngram3)
+        rows <- r %>% filter(nextWord %in% choices) %>% arrange(desc(mle))
+        print(r)
+        print(rows)
+        if(nrow(rows) > 0) {
+            predictedWord <- rows[1,2]
+            success <- predictedWord == solution
+            if (success) {
+                flog.info("*** Quiz Test - indirect 4gram prediction successful - prediction: %s, solution: %s", predictedWord, solution)
+            } else {
+                flog.info("*** Quiz Test - indirect 4gram prediction not successful - prediction: %s, solution: %s", predictedWord, solution)
+            }
+        }
+        if (!success) {
+            ngram2 <- paste(words[(numWords-1): numWords], collapse = " ")
+            flog.info("Quiz Test - doing indirect 3gram prediction with: %s", ngram2)
+            r <- lookupNGram(sboTables[[3]], ngram2)
+            rows <- r %>% filter(nextWord %in% choices) %>% arrange(desc(mle))
+            print(r)
+            print(rows)
+            
+            if(nrow(rows) > 0) {
+                predictedWord <- rows[1,2]
+                success <- predictedWord == solution
+                if (success) {
+                    flog.info("*** Quiz Test - indirect 3gram prediction successful - prediction: %s, solution: %s", predictedWord, solution)
+                } else {
+                    flog.info("*** Quiz Test - indirect 3gram prediction not successful - prediction: %s, solution: %s", predictedWord, solution)
+                }
+            }
+        }
     }
     success
     

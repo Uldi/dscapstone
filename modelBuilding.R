@@ -76,10 +76,10 @@ persistSBOModel <- function(sboTables, modelName="model") {
 
 loadSBOModel <- function(modelName="model") {
     library(tokenizers)
-    sbo4 <- read.csv(file=paste0("data/model/", modelName, "SBO4.csv"))
-    sbo3 <- read.csv(file=paste0("data/model/", modelName, "SBO3.csv"))
-    sbo2 <- read.csv(file=paste0("data/model/", modelName, "SBO2.csv"))
-    sbo1 <- read.csv(file=paste0("data/model/", modelName, "SBO1.csv"))
+    sbo4 <- read.csv(file=paste0("data/model/", modelName, "SBO4.csv"), as.is = TRUE)
+    sbo3 <- read.csv(file=paste0("data/model/", modelName, "SBO3.csv"), as.is = TRUE)
+    sbo2 <- read.csv(file=paste0("data/model/", modelName, "SBO2.csv"), as.is = TRUE)
+    sbo1 <- read.csv(file=paste0("data/model/", modelName, "SBO1.csv"), as.is = TRUE)
     list(sbo1, sbo2, sbo3, sbo4)
 }
 

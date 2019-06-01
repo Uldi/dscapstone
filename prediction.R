@@ -1,11 +1,3 @@
-initLibraries <- function() {
-    library(dplyr)
-    library(tokenizers)
-    library(quanteda)
-    library(readtext)
-    library(futile.logger)
-    flog.threshold(TRACE)
-}
 
 #predict using SBO approach
 #return orginial text appended with predicted word

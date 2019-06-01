@@ -1,5 +1,6 @@
 initLibraries <- function() {
     library(tm)
+    library(RWeka)
     library(dplyr)
     library(tokenizers)
     library(quanteda)
@@ -161,28 +162,25 @@ buildSBOTables <- function(df_1, df_2, df_3, df_4) {
 
 
 primCalculateSBOTables <- function(df_n, df_n_1) {
-    V <- as.integer(count(df_n))
+    V <- nrow(df_n)
+    n <- length(strsplit(df_n[1,1], " ")[[1]])
     mle <- numeric(V)
     nextWord <- character(V)
     ngram_1 <- character(V)
-    for (i in 1:V) {
-        if ((i %% 100000) == 0)  {flog.trace("primCalculateSBOTables - step %i", i)}
     
-        i_ngram <- df_n$ngram[i]
-        words <- unlist(strsplit(i_ngram, " "))
-        i_nextWord <- words[length(words)]
-        i_ngram_1 <- paste(words[-length(words)], collapse = " ")
-        
-        c_n <- df_n$count[i]
-        c_n_1 <- df_n_1$count[df_n_1$ngram==i_ngram_1]
-        mle[i] <- c_n / c_n_1
-        nextWord[i] <- i_nextWord
-        ngram_1[i] <- i_ngram_1
+    if (n==4) ngram_1Regex <- "^[^ ]+ [^ ]+ [^ ]+"
+    else if(n==3) ngram_1Regex <- "^[^ ]+ [^ ]+"
+    else if(n==2) ngram_1Regex <- "^[^ ]+"
+    df <- df_n %>% mutate(ngram_1 = str_extract(ngram, ngram_1Regex), nextWord = str_extract(ngram, "[^ ]+$")) %>% select(count, ngram_1, nextWord)
+    
+    distinceNGram_1 <- df %>% distinct(ngram_1)
+    df_n_1_f <- df_n_1 %>% filter(ngram %in% distinceNGram_1$ngram_1) %>% rename(count_1=count)
+    if(nrow(df_n_1_f) != nrow(distinceNGram_1)) {
+        stop("primCalculateSBOTables - issue mit ngrams...")
     }
-    df <- data.frame(ngram_1, nextWord, mle, stringsAsFactors = FALSE)
+    df <- df %>% left_join(df_n_1_f, by=c("ngram_1" = "ngram"))
+    df <- df %>% mutate(mle=count/count_1) %>% select(ngram_1, nextWord, mle)
 
-    df <- df %>% group_by(ngram_1)
-    
     #filter ngrams die auf ein Stopword enden...
     flog.trace("primCalculateSBOTables - nrows before filtering: %i", nrow(df))
     sw <- stopwords("en")
@@ -197,17 +195,22 @@ primCalculateSBOTables <- function(df_n, df_n_1) {
     df
 }
 
+lookup <- function(ngram, tdf) {
+    tdf$count[tdf$ngram==ngram]
+}
+
 #
 primCalculateSBO_1Table <- function(df1) {
     V <- as.integer(count(df1))
-    mle <- numeric(V)
-    nextWord <- character(V)
-    for (i in 1:V) {
-        if ((i %% 100000) == 0)  {flog.trace("primCalculateSBO_1Table - step %i", i)}
-        mle[i] <- df1$count[i] / V
-        nextWord[i] <- df1$ngram[i]
-    }
-    df <- data.frame(nextWord, mle, stringsAsFactors=FALSE)
+    df <- df1 %>% mutate(mle=count/V) %>% select(nextWord=ngram, mle) 
+    # mle <- numeric(V)
+    # nextWord <- character(V)
+    # for (i in 1:V) {
+    #     if ((i %% 100000) == 0)  {flog.trace("primCalculateSBO_1Table - step %i", i)}
+    #     mle[i] <- df1$count[i] / V
+    #     nextWord[i] <- df1$ngram[i]
+    # }
+    # df <- data.frame(nextWord, mle, stringsAsFactors=FALSE)
     
     #filter ngrams die auf ein Stopword enden...
     flog.trace("primCalculateSBO_1Table - nrows before filtering: %i", nrow(df))

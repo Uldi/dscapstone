@@ -23,6 +23,8 @@ generateSampleFile <- function(fileName, p=0.01) {
     close(outFile)
 }
 
+
+
 getProfanityWords <- function() { 
     pFile <- file("data/Google-profanity-words-master/list.txt", "r")
     profanityWords <- readLines(pFile)

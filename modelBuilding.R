@@ -6,6 +6,7 @@ initLibraries <- function() {
     library(quanteda)
     library(readtext)
     library(futile.logger)
+    library(stringr)
     flog.threshold(TRACE)
 }
 
@@ -140,7 +141,7 @@ buildTermCountDF <- function(dfm1, dfm2, dfm3, dfm4, minFreq=5) {
 
 #helper function
 restartBuildSBOTables <- function(file="tcdf.rds") {
-    tcdfList <- readRDS(file=paste0("data/temp/", file, ".rds"))
+    tcdfList <- readRDS(file=paste0("data/temp/", file))
     buildSBOTables(tcdfList[[1]], tcdfList[[2]], tcdfList[[3]], tcdfList[[4]])
 }
 

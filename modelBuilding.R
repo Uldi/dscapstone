@@ -140,6 +140,12 @@ buildTermCountDF <- function(dfm1, dfm2, dfm3, dfm4, minFreq=5) {
 }
 
 #helper function
+restartGetSBOTables <- function(file="dfms.rds", minFreq=5) {
+    dfmsList <- readRDS(file=paste0("data/temp/", file))
+    getSBOTables(dfmsList[[1]], dfmsList[[2]], dfmsList[[3]], dfmsList[[4]], minFreq)
+}
+
+#helper function
 restartBuildSBOTables <- function(file="tcdf.rds") {
     tcdfList <- readRDS(file=paste0("data/temp/", file))
     buildSBOTables(tcdfList[[1]], tcdfList[[2]], tcdfList[[3]], tcdfList[[4]])

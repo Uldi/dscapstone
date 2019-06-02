@@ -196,7 +196,7 @@ primCalculateSBOTables <- function(df_n, df_n_1) {
     
     #keep for sbo only the ngrams with the highest probability per ngram_1
     #don't filter for the quiz 3 as i need the other probabilities
-    # df <- df %>% filter(mle==max(mle))
+    # df <- df %>% group_by(ngram_1) %>% filter(mle==max(mle))
     # flog.trace("primCalculateSBOTables - nrows after filtering non max mle: %i", nrow(df))
     
     df
@@ -228,7 +228,7 @@ primCalculateSBO_1Table <- function(df1) {
     #keep for sbo only tghe ngrams with the highest probability
     #todo: man könnte noch optimieren und nur im das ngram mit dem höchsten MLE sammeln...
     #don't filter for the quiz 3 as i need the other probabilities
-    #df <- df %>% filter(mle==max(mle))
+    df <- df %>% filter(mle==max(mle))
     # flog.trace("primCalculateSBO_1Table - nrows after filtering non max mle: %i", nrow(df))
     df
 }

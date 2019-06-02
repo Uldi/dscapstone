@@ -89,7 +89,7 @@ primPredictSBONLP <- function(ngramSBOTables, text) {
 }
 
 lookupNGram <- function(sboTable, ngram) {
-    rows <- sboTable %>% filter(ngram_1 == ngram)
+    rows <- sboTable %>% filter(ngram_1 == ngram) %>% arrange(desc(mle))
     #TODO: hier könnte ich evtl. nur die erste row zurückgeben...
     rows
 }

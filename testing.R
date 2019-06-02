@@ -157,6 +157,25 @@ primQuizTest <- function(sboTables, sentence, choices, solution) {
                 }
             }
         }
+        if (!success) {
+            ngram1 <- words[numWords]
+            flog.info("Quiz Test - doing indirect 2gram prediction with: %s", ngram1)
+            r <- lookupNGram(sboTables[[2]], ngram1)
+            rows <- r %>% filter(nextWord %in% choices) %>% arrange(desc(mle))
+            flog.info("indirect 2gram %i matching rows", nrow(rows))
+            # print(r)
+            # print(rows)
+            
+            if(nrow(rows) > 0) {
+                predictedWord <- rows[1,2]
+                success <- predictedWord == solution
+                if (success) {
+                    flog.info("*** Quiz Test - indirect 2gram prediction successful - prediction: %s, solution: %s", predictedWord, solution)
+                } else {
+                    flog.info("XXX Quiz Test - indirect 2gram prediction not successful - prediction: %s, solution: %s", predictedWord, solution)
+                }
+            }
+        }
     }
     success
     

@@ -18,7 +18,8 @@ shinyUI(fluidPage(
         h5("(for word proposal enter 2 spaces!)"),
         
         textInput("dynText", label=NULL, value=""),
-        fluidRow(column(6, textOutput("fixedText")))
+        fluidRow(column(6, textOutput("fixedText"))),
+        DT::dataTableOutput('predictionTable')
     
 #        ,
             # Copy the line below to make a text input box
@@ -30,5 +31,6 @@ shinyUI(fluidPage(
 #            fluidRow(column(3, verbatimTextOutput("textDebug")))
 #            fluidRow(column(3, verbatimTextOutput("textOutput"))),
 #      )
+
     )
 ))

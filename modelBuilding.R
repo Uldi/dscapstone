@@ -169,12 +169,8 @@ buildSBOTables <- function(df_1, df_2, df_3, df_4) {
 
 
 primCalculateSBOTables <- function(df_n, df_n_1) {
-    V <- nrow(df_n)
+    #evaluate the n of the ngram to setup regex
     n <- length(strsplit(df_n[1,1], " ")[[1]])
-    mle <- numeric(V)
-    nextWord <- character(V)
-    ngram_1 <- character(V)
-    
     if (n==4) ngram_1Regex <- "^[^ ]+ [^ ]+ [^ ]+"
     else if(n==3) ngram_1Regex <- "^[^ ]+ [^ ]+"
     else if(n==2) ngram_1Regex <- "^[^ ]+"
@@ -200,10 +196,6 @@ primCalculateSBOTables <- function(df_n, df_n_1) {
     # flog.trace("primCalculateSBOTables - nrows after filtering non max mle: %i", nrow(df))
     
     df
-}
-
-lookup <- function(ngram, tdf) {
-    tdf$count[tdf$ngram==ngram]
 }
 
 #
@@ -287,57 +279,66 @@ filterStopword1Grams <- function(sboTable) {
 ## MLE = (Count(n grams) + 1)/ (Count(n-1 grams) + V)
 ###
 
-calculateMLE <- function(tdm_n, tdm_n_1, minFreq=5 ) {
-    df_n <- getTermCountDF(tdm_n, minFreq)
-    df_n_1 <- getTermCountDF(tdm_n_1, minFreq)
-    primCalculateMLE(df_n, df_n_1)
-}
 
-tbd_primCalculateMLE <- function(df_n, df_n_1) {
-    ngram <- df_n[1,]$ngram
-    ngram_1 <- paste(unlist(strsplit(ngram, " "))[-1], collapse = " ")
-    V <- as.integer(count(df_n_1))
+primCalculateSmoothedBOTables <- function(df_n, df_n_1) {
+    #evaluate the n of the ngram to setup regex
+    n <- length(strsplit(df_n[1,1], " ")[[1]])
+    if (n==4) ngram_1Regex <- "^[^ ]+ [^ ]+ [^ ]+"
+    else if(n==3) ngram_1Regex <- "^[^ ]+ [^ ]+"
+    else if(n==2) ngram_1Regex <- "^[^ ]+"
+    df <- df_n %>% mutate(ngram_1 = str_extract(ngram, ngram_1Regex), nextWord = str_extract(ngram, "[^ ]+$")) %>% select(count, ngram_1, nextWord)
     
-    mle <- (df_n$count[df_n$ngram==ngram] + 1) / (df_n_1$count[df_n_1$ngram==ngram_1] + V)
-    mle
-    lapply(df_n, calcMLE)
-    
-}
-
-testCalcMLE <- function(df_n, df_n_1) {
-    V <- as.integer(count(df_n_1))
-    p <- lapply(df_n$ngram, calcMLE, df_n, df_n_1,V)
-    df_n$p = unlist(p)
-    df_n
-}
-
-#calc mle and use laplace smoothing...
-calcMLELaPlace <- function(ngram, df_x, df_x_1, V) {
-    print(ngram)
-    # helper calculations..
-    ngram_1 <- paste(unlist(strsplit(ngram, " "))[-1], collapse = " ")
-    c_x <- df_x$count[df_x$ngram==ngram]
-    c_x_1 <- df_x_1$count[df_x_1$ngram==ngram_1]
-    mle <- 0
-    if (c_x != 0) {
-        # calculate Maximum Likelihood estimate P(C|AB) = count(ABC)/count(AB)
-        print("mle")
-        mle <- c_x / c_x_1
-    } else {
-        # perform Laplace Add - 1 smoothing Padd-1(C|AB) = (count(ABC) + 1)/(count(AB) + V)
-        print("laplace")
-        mle <- (c_x + 1) / (c_x_1 + V)
+    distinceNGram_1 <- df %>% distinct(ngram_1)
+    df_n_1_f <- df_n_1 %>% filter(ngram %in% distinceNGram_1$ngram_1) %>% rename(count_1=count)
+    if(nrow(df_n_1_f) != nrow(distinceNGram_1)) {
+        stop("primCalculateSBOTables - issue mit ngrams...")
     }
-    print(mle)
-    mle
+    df <- df %>% left_join(df_n_1_f, by=c("ngram_1" = "ngram"))
+    
+    # apply add+1 smoothing
+    V_1 <- nrow(df_n_1)
+    df <- df %>% mutate(mle=(count + 1)/(count_1 + V_1)) %>% select(ngram_1, nextWord, mle)
+    
+    #filter ngrams die auf ein Stopword enden...
+    flog.trace("primCalculateSBOTables - nrows before filtering: %i", nrow(df))
+    sw <- stopwords("en")
+    df <- df %>% filter(!(nextWord %in% sw))
+    flog.trace("primCalculateSBOTables - nrows after filtering stopwords: %i", nrow(df))
+    
+    #keep for sbo only the ngrams with the highest probability per ngram_1
+    #don't filter for the quiz 3 as i need the other probabilities
+    # df <- df %>% group_by(ngram_1) %>% filter(mle==max(mle))
+    # flog.trace("primCalculateSBOTables - nrows after filtering non max mle: %i", nrow(df))
+    
+    df
 }
 
-test_primCalculateMLE <- function(df_n, df_n_1) {
-    ngram <- df_n[1,]$ngram
-    ngram_1 <- paste(unlist(strsplit(ngram, " "))[-1], collapse = " ")
-    V <- as.integer(count(df_n_1))
+# as for SBO...
+primCalculateSmoothedBO_1Table <- function(df1) {
+    V <- as.integer(count(df1))
+    df <- df1 %>% mutate(mle=count/V) %>% select(nextWord=ngram, mle) 
+    # mle <- numeric(V)
+    # nextWord <- character(V)
+    # for (i in 1:V) {
+    #     if ((i %% 100000) == 0)  {flog.trace("primCalculateSBO_1Table - step %i", i)}
+    #     mle[i] <- df1$count[i] / V
+    #     nextWord[i] <- df1$ngram[i]
+    # }
+    # df <- data.frame(nextWord, mle, stringsAsFactors=FALSE)
     
-    mle <- (df_n$count[df_n$ngram==ngram] + 1) / (df_n_1$count[df_n_1$ngram==ngram_1] + V)
-    mle
+    #filter ngrams die auf ein Stopword enden...
+    flog.trace("primCalculateSBO_1Table - nrows before filtering: %i", nrow(df))
+    sw <- stopwords("en")
+    df <- df %>% filter(!(nextWord %in% sw))
+    flog.trace("primCalculateSBO_1Table - nrows after filtering stopwords: %i", nrow(df))
+    
+    #keep for sbo only tghe ngrams with the highest probability
+    #todo: man könnte noch optimieren und nur im das ngram mit dem höchsten MLE sammeln...
+    #don't filter for the quiz 3 as i need the other probabilities
+    df <- df %>% filter(mle==max(mle))
+    # flog.trace("primCalculateSBO_1Table - nrows after filtering non max mle: %i", nrow(df))
+    df
 }
+
+
 

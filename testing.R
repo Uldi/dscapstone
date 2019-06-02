@@ -1,4 +1,4 @@
-test <- function(sboTables, nTests=0) {
+test <- function(kboTables, nTests=0) {
     test4grams <- readRDS(file="data/testing/test4grams.rds")
     successCount <-0
     if(nTests == 0) nTests <- nrow(test4grams)
@@ -7,7 +7,7 @@ test <- function(sboTables, nTests=0) {
     for(i in 1:nTests) {
         row <- test4grams[i,]
         ngram <- paste(as.character(row$ngram_1), as.character(row$nextWord))
-        predicted4gram <- predictSBONLP(sboTables, as.character(row$ngram_1))
+        predicted4gram <- predictNextWord(kboTables, as.character(row$ngram_1))
         if(predicted4gram == ngram) successCount <- successCount + 1
     }
     flog.info("test result: success count out of %i test: %i", i, successCount)
@@ -110,7 +110,7 @@ quiz3 <- function(sboTables){
 primQuizTest <- function(sboTables, sentence, choices, solution) {
     flog.trace("primQuizTest: %s, choices=(%s), solution=%s", sentence, paste(choices, collapse=", "), solution)
     success <- FALSE
-    predictedWord <- primPredictSBONLP(sboTables, sentence)
+    predictedWord <- primPredictNextWord(sboTables, sentence)
     flog.info("Quiz Test - sentence %s", sentence)
     success <- predictedWord == solution
     if (success) {

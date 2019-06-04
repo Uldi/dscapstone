@@ -66,6 +66,13 @@ primSetupNLP <- function(tokens, minFreq=1) {
     # getSBOTablesParallel(dfm1, dfm2, dfm3, dfm4, minFreq)
 }
 
+saveKBOModel <- function(kboTables, modelName="model") {
+    saveRDS(kboTables, file=paste0("data/model/", modelName, "KBO.rds"))
+}
+
+readKBOModel <- function(modelName="model") {
+    readRDS(file=paste0("data/model/", modelName, "KBO.rds"))
+}
 
 persistSBOModel <- function(sboTables, modelName="model") {
     write.csv(sboTables[[4]], file=paste0("data/model/", modelName, "SBO4.csv"), row.names = FALSE)
@@ -278,10 +285,40 @@ filterStopword1Grams <- function(sboTable) {
 ## V is the number of unique n-1 grams you have in the corpus
 ## MLE = (Count(n grams) + 1)/ (Count(n-1 grams) + V)
 ###
+buildSmoothedBOTables <- function(df_1, df_2, df_3, df_4) {
+    V <- nrow(df_1)
+    flog.trace("buildSmoothedBOTables: Vocabulatory size = %i", V)
+    
+    flog.trace("buildSmoothedBOTables: primCalculateSmoothedBOTables 4")
+    sdf_4 <- primCalculateSmoothedBOTables(df_4, df_3, V)
+    flog.trace("buildSmoothedBOTables: primCalculateSmoothedBOTables 3")
+    sdf_3 <- primCalculateSmoothedBOTables(df_3, df_2, V)
+    flog.trace("buildSmoothedBOTables: primCalculateSmoothedBOTables 2")
+    sdf_2 <- primCalculateSmoothedBOTables(df_2, df_1, V)
+    flog.trace("buildSmoothedBOTables: primCalculateSmoothedBO_1Table 1")
+    sdf_1 <- primCalculateSmoothedBO_1Table(df_1)
+    
+    tsbo <- list(sdf_1, sdf_2, sdf_3, sdf_4)
+    saveRDS(tsbo,  file="data/temp/tsbo.rds")
+    tsbo
+}
+
+#helper function
+restartBuildSmoothedBOTables <- function(file="tcdf.rds") {
+    tcdfList <- readRDS(file=paste0("data/temp/", file))
+    buildSmoothedBOTables(tcdfList[[1]], tcdfList[[2]], tcdfList[[3]], tcdfList[[4]])
+}
+
+#helper function
+restartBuildTermCountDF <- function(file="dfms.rds", minFreq=5) {
+    dfmsList <- readRDS(file=paste0("data/temp/", file))
+    buildTermCountDF(dfmsList[[1]], dfmsList[[2]], dfmsList[[3]], dfmsList[[4]], minFreq)
+}
 
 
-primCalculateSmoothedBOTables <- function(df_n, df_n_1) {
+primCalculateSmoothedBOTables <- function(df_n, df_n_1, V) {
     #evaluate the n of the ngram to setup regex
+    flog.trace("primCalculateSmoothedBOTables")
     n <- length(strsplit(df_n[1,1], " ")[[1]])
     if (n==4) ngram_1Regex <- "^[^ ]+ [^ ]+ [^ ]+"
     else if(n==3) ngram_1Regex <- "^[^ ]+ [^ ]+"
@@ -291,19 +328,19 @@ primCalculateSmoothedBOTables <- function(df_n, df_n_1) {
     distinceNGram_1 <- df %>% distinct(ngram_1)
     df_n_1_f <- df_n_1 %>% filter(ngram %in% distinceNGram_1$ngram_1) %>% rename(count_1=count)
     if(nrow(df_n_1_f) != nrow(distinceNGram_1)) {
-        stop("primCalculateSBOTables - issue mit ngrams...")
+        stop("primCalculateSmoothedBO_1Table - issue mit ngrams...")
     }
     df <- df %>% left_join(df_n_1_f, by=c("ngram_1" = "ngram"))
     
-    # apply add+1 smoothing
+    # apply add+1 smoothing, divide by V_1 (the number of n-1 grams)
     V_1 <- nrow(df_n_1)
-    df <- df %>% mutate(mle=(count + 1)/(count_1 + V_1)) %>% select(ngram_1, nextWord, mle)
+    df <- df %>% mutate(mle=(count + 1)/(count_1 + V_1)) %>% select(ngram_1, nextWord, mle, count)
     
     #filter ngrams die auf ein Stopword enden...
-    flog.trace("primCalculateSBOTables - nrows before filtering: %i", nrow(df))
+    flog.trace("primCalculateSmoothedBOTables - nrows before filtering: %i", nrow(df))
     sw <- stopwords("en")
     df <- df %>% filter(!(nextWord %in% sw))
-    flog.trace("primCalculateSBOTables - nrows after filtering stopwords: %i", nrow(df))
+    flog.trace("primCalculateSmoothedBOTables - nrows after filtering stopwords: %i", nrow(df))
     
     #keep for sbo only the ngrams with the highest probability per ngram_1
     #don't filter for the quiz 3 as i need the other probabilities
@@ -327,17 +364,27 @@ primCalculateSmoothedBO_1Table <- function(df1) {
     # df <- data.frame(nextWord, mle, stringsAsFactors=FALSE)
     
     #filter ngrams die auf ein Stopword enden...
-    flog.trace("primCalculateSBO_1Table - nrows before filtering: %i", nrow(df))
+    flog.trace("primCalculateSmoothedBO_1Table - nrows before filtering: %i", nrow(df))
     sw <- stopwords("en")
     df <- df %>% filter(!(nextWord %in% sw))
-    flog.trace("primCalculateSBO_1Table - nrows after filtering stopwords: %i", nrow(df))
+    flog.trace("primCalculateSmoothedBO_1Table - nrows after filtering stopwords: %i", nrow(df))
     
     #keep for sbo only tghe ngrams with the highest probability
     #todo: man könnte noch optimieren und nur im das ngram mit dem höchsten MLE sammeln...
     #don't filter for the quiz 3 as i need the other probabilities
     df <- df %>% filter(mle==max(mle))
-    # flog.trace("primCalculateSBO_1Table - nrows after filtering non max mle: %i", nrow(df))
+    # flog.trace("primCalculateSmoothedBO_1Table - nrows after filtering non max mle: %i", nrow(df))
     df
+}
+
+#based on slide 71 in http://gki.informatik.uni-freiburg.de/teaching/ws0405/advanced/AAI1.ppt
+getGoodTouringEstimator <- function(k=5, c, nVector) {
+    if (c > k) cStar <- c
+    # N1 is the number of ngrams that occur 1 time, N2 ...2 times etc.
+    else if (c==0) cStar <- N1/N0
+    else {
+        cStar <- ((c + 1)*Nc+1/Nc - c*(k+1)*Nk+1/N1) / (1 - (k+1) * Nk+1/N1)
+    }
 }
 
 

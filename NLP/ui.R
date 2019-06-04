@@ -14,11 +14,20 @@ shinyUI(fluidPage(
     verticalLayout(
         titlePanel("NLP Simple Test"),
         hr(),
-        h4("Enter your dynamic Input"),
+        h4("Enter your dynamic Input"), 
         h5("(for word proposal enter 2 spaces!)"),
         
         textInput("dynText", label=NULL, value=""),
         fluidRow(column(6, textOutput("fixedText"))),
+        hr(),
+        sliderInput("kValue", "k:",
+                    min = 0, max = 100,
+                    value = 0),
+        
+        # Input: Decimal interval with step value ----
+        sliderInput("alpha", "alpha:",
+                    min = 0, max = 1,
+                    value = 0.4, step = 0.01),
         DT::dataTableOutput('predictionTable')
     
 #        ,

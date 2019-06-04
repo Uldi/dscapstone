@@ -56,6 +56,7 @@ primPrepareCorpus <- function(dataLoadFunction) {
     flog.trace("primPrepareCorpus - laodData")
     c <- dataLoadFunction()
     flog.trace("primPrepareCorpus - remove stopwords")
+    c <- tm_map(c, FUN = content_transformer(tolower))
     c <- tm_map(c, FUN = removeWords, myStopwords())
     cm <- VCorpus(VectorSource(c(c[[1]]$content, c[[2]]$content, c[[3]]$content)))
     corp <- corpus(cm)
@@ -70,6 +71,7 @@ primPrepareCorpus <- function(dataLoadFunction) {
 primPrepareTestCorpus <- function() {
     
     c <- loadTestCorpus()
+    c <- tm_map(c, FUN = content_transformer(tolower))
     c <- tm_map(c, FUN = removeWords, myStopwords())
     cm <- VCorpus(VectorSource(c(c[[1]]$content)))
     corp <- corpus(cm)
@@ -81,12 +83,12 @@ primPrepareTestCorpus <- function() {
 }
 
 myStopwords <- function() {
-    #c(getProfanityWords(),stopwords("en"))
+    # c(getProfanityWords(),stopwords("en"))
     getProfanityWords()
 }
 
 removeStopwords <- function(sentence) {
-    tok <- tokens(sentence, remove_numbers=TRUE, remove_punct=TRUE, remove_symbols=TRUE, remove_hyphens=FALSE, remove_twitter=TRUE)
+    tok <- tokens(sentence, remove_numbers=TRUE, remove_punct=TRUE, remove_symbols=TRUE, remove_hyphens=FALSE, remove_twitter=TRUE, remove_url=TRUE)
     tok <- tokens_tolower(tok, keep_acronyms = TRUE)
     tok <- tokens_remove(tok, myStopwords())
     as.character(tok)
@@ -102,7 +104,7 @@ removeStopwords <- function(sentence) {
 # }
 
 getDocFeatureMatrix <- function(tokens, n) {
-    dfm <- dfm(tokens, remove_numbers=TRUE, remove_punct=TRUE, remove_symbols=TRUE, remove_hyphens=FALSE, remove_twitter=TRUE, ngram=n, concatenator = " ")
+    dfm <- dfm(tokens, what="fasterword", remove_numbers=TRUE, remove_punct=TRUE, remove_symbols=TRUE, remove_hyphens=FALSE, remove_twitter=TRUE, remove_url=TRUE, ngram=n, concatenator = " ")
 }
 
 #macht nur Sinn bei den 4-grams, ansonsten kann der SBO nicht mehr sinnvoll berechnet werden, div durch 0!

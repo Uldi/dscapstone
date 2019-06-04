@@ -11,6 +11,7 @@ library(shiny)
 library(DT)
 library(futile.logger)
 library(dplyr)
+library(quanteda)
 
 
 # Define server logic required to draw a histogram
@@ -20,8 +21,9 @@ shinyServer(function(input, output, session) {
     setwd("/Users/david/Coursera/assignments/dscapstone")
     flog.trace(getwd())
     # ngramKBOTables <- loadSBOModel("fullNoPW1F")
-    ngramKBOTables <- readKBOModel("fullNoPW1FC")
     # ngramKBOTables <- readKBOModel("fullNoPWNoSW1F")
+    # ngramKBOTables <- readKBOModel("fullNoPW1FC")
+    ngramKBOTables <- kboFull
     text <- ""
     flog.info("load NLP prediction model - completed")
     

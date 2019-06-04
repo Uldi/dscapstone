@@ -378,14 +378,36 @@ primCalculateSmoothedBO_1Table <- function(df1) {
 }
 
 #based on slide 71 in http://gki.informatik.uni-freiburg.de/teaching/ws0405/advanced/AAI1.ppt
-getGoodTouringEstimator <- function(k=5, c, nVector) {
-    if (c > k) cStar <- c
+calculateGoodTouringEstimator <- function(k=5, c, kboTable) {
+    
     # N1 is the number of ngrams that occur 1 time, N2 ...2 times etc.
-    else if (c==0) cStar <- N1/N0
+    if (c > k) {cStar <- c}
+    else if (c==0) {cStar <- 0}   #just take 0
     else {
-        cStar <- ((c + 1)*Nc+1/Nc - c*(k+1)*Nk+1/N1) / (1 - (k+1) * Nk+1/N1)
+        Nk1 <- nrow(kboTable %>% filter(count==(k+1)))  #Nk
+        N1 <- nrow(kboTable %>% filter(count==1))  #N1
+        Nc1 <- nrow(kboTable %>% filter(count==(c+1)))  #Nc+1
+        Nc <- nrow(kboTable %>% filter(count==c))  #Nc
+        cStar <- ((c + 1)*Nc1/Nc - c*(k+1)*Nk1/N1) / (1 - (k+1) * Nk1/N1)
     }
+    cStar <- cStar / c
+    flog.trace("Good Touring Estimator for c=%i and k=%i :%f", c, k, cStar)
+    cStar
+    
+    # cstars <- numeric(k)
+    # if (k > 0) {
+    #     Nk1 <- nrow(dfn %>% filter(count==(k+1)))  #Nk
+    #     N1 <- nrow(dfn %>% filter(count==1))  #N1
+    #     for (c in 1:k) {
+    #         Nc1 <- nrow(dfn %>% filter(count==(c+1)))  #Nc+1
+    #         Nc <- nrow(dfn %>% filter(count==c))  #Nc
+    #         
+    #         cStar <- ((c + 1)*Nc1/Nc - c*(k+1)*Nk1/N1) / (1 - (k+1) * Nk1/N1)
+    #     }
+    #}
+    # cstars
 }
+
 
 
 

@@ -27,7 +27,7 @@ shinyUI(fluidPage(
         # Input: Decimal interval with step value ----
         sliderInput("alpha", "alpha:",
                     min = 0, max = 1,
-                    value = 0.4, step = 0.01),
+                    value = 0.4, step = 0.1),
         DT::dataTableOutput('predictionTable')
     
 #        ,

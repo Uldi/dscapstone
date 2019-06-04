@@ -85,7 +85,7 @@ getNextWordPredictionTable <- function(ngramKBOTables, text, k=0, alpha=0.4) {
 
     #ToDo
     #idee wäre hier mit dem tokenizer package den Input zu zerstückeln...
-    flog.trace("getNextWordPredictionTable - text to predict %s", text)
+    flog.trace("getNextWordPredictionTable with k=%i and alpha=%f - text to predict %s", k, alpha,text)
     words <- c()
     if (!is.na(text) && (nchar(trimws(text)) > 0)) {
         
@@ -101,27 +101,33 @@ getNextWordPredictionTable <- function(ngramKBOTables, text, k=0, alpha=0.4) {
     ngramWord <- words[length(words)]
     numWords <- length(words)
     
-    predDF <- setNames(data.frame(matrix(ncol = 3, nrow = 0)), c("ngram_1", "nextWord", "mle"))
+    predDF <- setNames(data.frame(matrix(ncol = 4, nrow = 0)), c("ngram_1", "nextWord", "mle", "count"))
     
     #4grams
     if (numWords >= 3) {
         last3Words <- paste(words[(numWords-2): numWords], collapse = " ")
         flog.trace("4-gram: %s", last3Words)
-        rows4 <- lookupNGram(ngramKBOTables[[4]], last3Words) %>% filer(count > k)
+        rows4 <- lookupNGram(ngramKBOTables[[4]], last3Words) %>% filter(count > k)
+        #apply GoodTouring Estimator
+        rows4 <- rows4 %>% mutate(mle = mapply(function(mle, count) {mle * calculateGoodTouringEstimator(k, count, ngramKBOTables[[4]])}, mle, count))
         predDF <- rbind(predDF, rows4)
     }
     #3grams
     if (numWords >= 2) {
         last2Words <- paste(words[(numWords-1): numWords], collapse = " ")
         flog.trace("3-gram: %s", last2Words)
-        rows3 <- lookupNGram(ngramKBOTables[[3]], last2Words) %>% filer(count > k) %>% mutate(mle=mle*alpha)
+        rows3 <- lookupNGram(ngramKBOTables[[3]], last2Words) %>% filter(count > k) %>% mutate(mle=mle*alpha)
+        #apply GoodTouring Estimator
+        rows3 <- rows3 %>% mutate(mle = mapply(function(mle, count) {mle * calculateGoodTouringEstimator(k, count, ngramKBOTables[[3]])}, mle, count))
         predDF <- rbind(predDF, rows3)
     }
     #2grams
     if (numWords >= 1) {
         lastWord <- words[numWords]
         flog.trace("2-gram: %s", lastWord)
-        rows2 <- lookupNGram(ngramKBOTables[[2]], lastWord) %>% filer(count > k) %>% mutate(mle=mle*alpha^2)
+        rows2 <- lookupNGram(ngramKBOTables[[2]], lastWord) %>% filter(count > k) %>% mutate(mle=mle*alpha^2)
+        #apply GoodTouring Estimator
+        rows2 <- rows2 %>% mutate(mle = mapply(function(mle, count) {mle * calculateGoodTouringEstimator(k, count, ngramKBOTables[[2]])}, mle, count))
         predDF <- rbind(predDF, rows2)
     } 
     predDF <- predDF %>% arrange(desc(mle)) #%>% top_n(10, mle)

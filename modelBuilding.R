@@ -127,7 +127,8 @@ loadSBOModel <- function(modelName="model") {
 
 getSBOTables <-  function(dfm1, dfm2, dfm3, dfm4, minFreq=5) {
     tcdfList <- buildTermCountDF(dfm1, dfm2, dfm3, dfm4, minFreq)
-    tsboList <- buildSBOTables(tcdfList[[1]], tcdfList[[2]], tcdfList[[3]], tcdfList[[4]])
+    # tsboList <- buildSBOTables(tcdfList[[1]], tcdfList[[2]], tcdfList[[3]], tcdfList[[4]])
+    tsboList <- buildSmoothedBOTables(tcdfList[[1]], tcdfList[[2]], tcdfList[[3]], tcdfList[[4]])
     tsboList
 }
     
@@ -286,15 +287,13 @@ filterStopword1Grams <- function(sboTable) {
 ## MLE = (Count(n grams) + 1)/ (Count(n-1 grams) + V)
 ###
 buildSmoothedBOTables <- function(df_1, df_2, df_3, df_4) {
-    V <- nrow(df_1)
-    flog.trace("buildSmoothedBOTables: Vocabulatory size = %i", V)
-    
+    useAdd1Smoothing <- FALSE
     flog.trace("buildSmoothedBOTables: primCalculateSmoothedBOTables 4")
-    sdf_4 <- primCalculateSmoothedBOTables(df_4, df_3, V)
+    sdf_4 <- primCalculateSmoothedBOTables(df_4, df_3, useAdd1Smoothing)
     flog.trace("buildSmoothedBOTables: primCalculateSmoothedBOTables 3")
-    sdf_3 <- primCalculateSmoothedBOTables(df_3, df_2, V)
+    sdf_3 <- primCalculateSmoothedBOTables(df_3, df_2, useAdd1Smoothing)
     flog.trace("buildSmoothedBOTables: primCalculateSmoothedBOTables 2")
-    sdf_2 <- primCalculateSmoothedBOTables(df_2, df_1, V)
+    sdf_2 <- primCalculateSmoothedBOTables(df_2, df_1, useAdd1Smoothing)
     flog.trace("buildSmoothedBOTables: primCalculateSmoothedBO_1Table 1")
     sdf_1 <- primCalculateSmoothedBO_1Table(df_1)
     
@@ -316,7 +315,7 @@ restartBuildTermCountDF <- function(file="dfms.rds", minFreq=5) {
 }
 
 
-primCalculateSmoothedBOTables <- function(df_n, df_n_1, V) {
+primCalculateSmoothedBOTables <- function(df_n, df_n_1, useAdd1Smoothing) {
     #evaluate the n of the ngram to setup regex
     flog.trace("primCalculateSmoothedBOTables")
     n <- length(strsplit(df_n[1,1], " ")[[1]])
@@ -333,8 +332,18 @@ primCalculateSmoothedBOTables <- function(df_n, df_n_1, V) {
     df <- df %>% left_join(df_n_1_f, by=c("ngram_1" = "ngram"))
     
     # apply add+1 smoothing, divide by V_1 (the number of n-1 grams)
-    V_1 <- nrow(df_n_1)
-    df <- df %>% mutate(mle=(count + 1)/(count_1 + V_1)) %>% select(ngram_1, nextWord, mle, count)
+    if (useAdd1Smoothing) {
+        V_1 <- nrow(df_n_1)
+        df <- df %>% mutate(mle=(count + 1)/(count_1 + V_1)) 
+    } else {
+        df <- df %>% mutate(mle=count/count_1)
+    }
+    
+    # #apply katzbach backoff
+    # gtTable <- getGoodTouringTable(k, df)
+    
+    #select relevant columns
+    df <- df %>% select(ngram_1, nextWord, mle, count)
     
     #filter ngrams die auf ein Stopword enden...
     flog.trace("primCalculateSmoothedBOTables - nrows before filtering: %i", nrow(df))
@@ -353,16 +362,8 @@ primCalculateSmoothedBOTables <- function(df_n, df_n_1, V) {
 # as for SBO...
 primCalculateSmoothedBO_1Table <- function(df1) {
     V <- as.integer(count(df1))
-    df <- df1 %>% mutate(mle=count/V) %>% select(nextWord=ngram, mle) 
-    # mle <- numeric(V)
-    # nextWord <- character(V)
-    # for (i in 1:V) {
-    #     if ((i %% 100000) == 0)  {flog.trace("primCalculateSBO_1Table - step %i", i)}
-    #     mle[i] <- df1$count[i] / V
-    #     nextWord[i] <- df1$ngram[i]
-    # }
-    # df <- data.frame(nextWord, mle, stringsAsFactors=FALSE)
-    
+    df <- df1 %>% mutate(mle=count/V) %>% select(nextWord=ngram, mle, count) 
+
     #filter ngrams die auf ein Stopword enden...
     flog.trace("primCalculateSmoothedBO_1Table - nrows before filtering: %i", nrow(df))
     sw <- stopwords("en")
@@ -393,19 +394,23 @@ calculateGoodTouringEstimator <- function(k=5, c, kboTable) {
     cStar <- cStar / c
     flog.trace("Good Touring Estimator for c=%i and k=%i :%f", c, k, cStar)
     cStar
+}
     
-    # cstars <- numeric(k)
-    # if (k > 0) {
-    #     Nk1 <- nrow(dfn %>% filter(count==(k+1)))  #Nk
-    #     N1 <- nrow(dfn %>% filter(count==1))  #N1
-    #     for (c in 1:k) {
-    #         Nc1 <- nrow(dfn %>% filter(count==(c+1)))  #Nc+1
-    #         Nc <- nrow(dfn %>% filter(count==c))  #Nc
-    #         
-    #         cStar <- ((c + 1)*Nc1/Nc - c*(k+1)*Nk1/N1) / (1 - (k+1) * Nk1/N1)
-    #     }
-    #}
-    # cstars
+getGoodTouringTable <- function(k=5, kboTable) {
+    gttable <- numeric(k)
+    if (k > 0) {
+        Nk1 <- nrow(kboTable %>% filter(count==(k+1)))  #Nk
+        N1 <- nrow(kboTable %>% filter(count==1))  #N1
+        for (c in 1:k) {
+            Nc1 <- nrow(kboTable %>% filter(count==(c+1)))  #Nc+1
+            Nc <- nrow(kboTable %>% filter(count==c))  #Nc
+
+            cstar <- ((c + 1)*Nc1/Nc - c*(k+1)*Nk1/N1) / (1 - (k+1) * Nk1/N1)
+            gttable[c] <- cstar/c
+            flog.trace("Good Touring Table entry for c=%i and k=%i :%f", c, k, gttable[c])
+        }
+    }
+    gttable
 }
 
 

@@ -17,17 +17,19 @@ shinyUI(fluidPage(
         h4("Enter your dynamic Input"), 
         h5("(for word proposal enter 2 spaces!)"),
         
-        textInput("dynText", label=NULL, value=""),
-        fluidRow(column(6, textOutput("fixedText"))),
+        fluidRow(column(12, textInput("dynText", label=NULL, value="", width="100%"))),
+        fluidRow(column(12, textOutput("fixedText"))),
         hr(),
         sliderInput("kValue", "k:",
                     min = 0, max = 100,
-                    value = 0),
+                    value = 5),
         
         # Input: Decimal interval with step value ----
         sliderInput("alpha", "alpha:",
                     min = 0, max = 1,
-                    value = 0.4, step = 0.1),
+                    value = 0.2, step = 0.1),
+        checkboxInput("kboCheckbox", label = "Use KBO instead of SBO", value = TRUE),
+        
         DT::dataTableOutput('predictionTable')
     
 #        ,

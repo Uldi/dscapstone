@@ -19,7 +19,8 @@ loadSampleCorpus <- function() {
 }
 
 loadFullCorpus <- function() {
-    loadTMCorpusInMem("data/final/en_US")
+    # loadTMCorpusInMem("data/final/en_US")
+    loadTMCorpusInMem("data/split/train")
 }
 
 persistCorpus <- function(tokens, corpName) {
@@ -83,7 +84,7 @@ primPrepareTestCorpus <- function() {
 }
 
 myStopwords <- function() {
-    # c(getProfanityWords(),stopwords("en"))
+    c(getProfanityWords(),stopwords("en"))
     getProfanityWords()
 }
 
@@ -104,7 +105,7 @@ removeStopwords <- function(sentence) {
 # }
 
 getDocFeatureMatrix <- function(tokens, n) {
-    dfm <- dfm(tokens, what="fasterword", remove_numbers=TRUE, remove_punct=TRUE, remove_symbols=TRUE, remove_hyphens=FALSE, remove_twitter=TRUE, remove_url=TRUE, ngram=n, concatenator = " ")
+    dfm <- dfm(tokens, what="word", remove_numbers=TRUE, remove_punct=TRUE, remove_symbols=TRUE, remove_hyphens=FALSE, remove_twitter=TRUE, remove_url=TRUE, ngram=n, concatenator = " ")
 }
 
 #macht nur Sinn bei den 4-grams, ansonsten kann der SBO nicht mehr sinnvoll berechnet werden, div durch 0!

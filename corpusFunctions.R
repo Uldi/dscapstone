@@ -1,6 +1,6 @@
-loadCorpusInMem <- function(dir) {
-    corpus(readtext(paste0(dir, "/*")))
-}
+# loadCorpusInMem <- function(dir) {
+#     corpus(readtext(paste0(dir, "/*")))
+# }
 
 loadTMCorpusInMem <- function(dir) {
     textCorpus <- VCorpus(DirSource(dir),
@@ -10,18 +10,6 @@ loadTMCorpusInMem <- function(dir) {
     textCorpus
 }
 
-loadTestCorpus <- function() {
-    loadTMCorpusInMem("data/test")
-}
-
-loadSampleCorpus <- function() {
-    loadTMCorpusInMem("data/samples")
-}
-
-loadFullCorpus <- function() {
-    # loadTMCorpusInMem("data/final/en_US")
-    loadTMCorpusInMem("data/split/train")
-}
 
 persistCorpus <- function(tokens, corpName) {
     saveRDS(tokens,  file=paste0("data/corpus/", corpName, ".rds"))
@@ -32,90 +20,53 @@ loadPersistedCorpus <- function(corpName) {
 }
 
 
-maxChars <- function(textDocument) {
-    l <- lapply(textDocument$content, nchar)
-    i <- which.max(l)
-    l[i]
-}
-
-prepareSampleCorpus <- function() {
-    flog.trace("prepareSampleCorpus")
-    primPrepareCorpus(loadSampleCorpus)
-}
-
-prepareFullCorpus <- function() {
-    flog.trace("prepareFullCorpus")
-    primPrepareCorpus(loadFullCorpus)
-}
-
-prepareTestCorpus <- function() {
-    flog.trace("prepareTestCorpus")
-    primPrepareTestCorpus()
-}
-
-primPrepareCorpus <- function(dataLoadFunction) {
-    flog.trace("primPrepareCorpus - laodData")
-    c <- dataLoadFunction()
-    flog.trace("primPrepareCorpus - remove stopwords")
+#a 3 document corpus
+prepareCorpus <- function(dir="data/split/train", filterStopwords=TRUE) {
+    flog.trace("prepareCorpus - laodData from dir=%s", dir)
+    c <- loadTMCorpusInMem(dir)
+    flog.trace("prepareCorpus - remove stopwords")
     c <- tm_map(c, FUN = content_transformer(tolower))
-    c <- tm_map(c, FUN = removeWords, myStopwords())
+    c <- tm_map(c, FUN = removeWords, myStopwords(filterStopwords))
     cm <- VCorpus(VectorSource(c(c[[1]]$content, c[[2]]$content, c[[3]]$content)))
     corp <- corpus(cm)
-    #corp <- dataLoadFunction()
-    flog.trace("primPrepareCorpus - quanteda in action")
+    flog.trace("prepareCorpus - quanteda in action")
     corp <- corpus_reshape(corp, to = c("sentences"), use_docvars = FALSE)
     corp <- corpus(texts(corp, groups = rep(1, ndoc(corp))))
     tokens <- tokens(corp, what = "sentence")
     as.character(tokens)
 }
 
-primPrepareTestCorpus <- function() {
-    
-    c <- loadTestCorpus()
+#just a single doc corpus
+prepareTestCorpus <- function(dir="data/test", filterStopwords=TRUE) {
+    flog.trace("prepareTestCorpus on dir=%s", dir)
+    c <- loadTMCorpusInMem(dir)
     c <- tm_map(c, FUN = content_transformer(tolower))
-    c <- tm_map(c, FUN = removeWords, myStopwords())
+    c <- tm_map(c, FUN = removeWords, myStopwords(filterStopwords))
     cm <- VCorpus(VectorSource(c(c[[1]]$content)))
     corp <- corpus(cm)
-    #corp <- dataLoadFunction()
     corp <- corpus_reshape(corp, to = c("sentences"), use_docvars = FALSE)
     corp <- corpus(texts(corp, groups = rep(1, ndoc(corp))))
     tokens <- tokens(corp, what = "sentence")
     as.character(tokens)
 }
 
-myStopwords <- function() {
-    c(getProfanityWords(),stopwords("en"))
-    getProfanityWords()
+myStopwords <- function(filterStopwords=TRUE) {
+    if (filterStopwords) 
+        c(getProfanityWords(),stopwords("en"))
+    else 
+        getProfanityWords()
 }
 
-removeStopwords <- function(sentence) {
+removeStopwords <- function(sentence, filterStopwords=TRUE) {
     tok <- tokens(sentence, remove_numbers=TRUE, remove_punct=TRUE, remove_symbols=TRUE, remove_hyphens=FALSE, remove_twitter=TRUE, remove_url=TRUE)
     tok <- tokens_tolower(tok, keep_acronyms = TRUE)
-    tok <- tokens_remove(tok, myStopwords())
+    tok <- tokens_remove(tok, myStopwords(filterStopwords))
     as.character(tok)
 }
-
-# getDocFeatureMatrix <- function(tokens, n) {
-#     tokens %>%
-#         tokens(remove_numbers=TRUE, remove_punct=TRUE, remove_symbols=TRUE, remove_hyphens=FALSE, remove_twitter=TRUE) %>%
-#         tokens_remove("\\p{P}", valuetype = "regex", padding = TRUE) %>%
-#         tokens_remove(myStopwords(), padding  = TRUE) %>%
-#         tokens_ngrams(n = n, concatenator = " ") %>%
-#         dfm()
-# }
 
 getDocFeatureMatrix <- function(tokens, n) {
     dfm <- dfm(tokens, what="word", remove_numbers=TRUE, remove_punct=TRUE, remove_symbols=TRUE, remove_hyphens=FALSE, remove_twitter=TRUE, remove_url=TRUE, ngram=n, concatenator = " ")
 }
-
-#macht nur Sinn bei den 4-grams, ansonsten kann der SBO nicht mehr sinnvoll berechnet werden, div durch 0!
-# removeNGramEndingWithStopwords <- function(dfm) {
-#     sw <- stopwords("en")
-#     for (w in sw) {
-#         dfm <- dfm_remove(dfm, pattern=paste0(" ",w ,"$"), valuetype="regex")
-#     }
-#     dfm
-# }
 
 getTermCountDF <- function(dfm, minFreq=10) {
     dfmt <- dfm_trim(dfm, min_termfreq = minFreq)
@@ -146,5 +97,10 @@ getTermCountDF <- function(dfm, minFreq=10) {
 #     plot(ft, main=paste("top", frequency, "frequent", ngram, "-grams"), ylab="frequency", xlab="terms with decreasing frequency")
 # }
 
+maxChars <- function(textDocument) {
+    l <- lapply(textDocument$content, nchar)
+    i <- which.max(l)
+    l[i]
+}
 
 

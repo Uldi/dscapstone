@@ -10,37 +10,47 @@ initLibraries <- function() {
     flog.threshold(TRACE)
 }
 
-setupTestNLP <- function() {
+setupTrainNLP <- function(minFreq=10, corpName="train") {
     initLibraries()
-    tokens <- prepareTestCorpus()
-    persistCorpus(tokens, "test1")
+    flog.info("setupTrainNLP: start - minFreq = %i", minFreq)
+    tokens <- prepareCorpus("data/split/train", TRUE)
+    persistCorpus(tokens, corpName)
+    flog.trace("setupTrainNLP: corpus %s prepared", corpName)
+    sbo <- primSetupNLP(tokens, minFreq)
+    flog.info("setupTrainNLP: end")
+    sbo
+}
+
+setupTestNLP <- function(minFreq=10, corpName="test") {
+    initLibraries()
+    flog.info("setupTestNLP: start - minFreq = %i", minFreq)
+    tokens <- prepareCorpus("data/split/test", TRUE)
+    persistCorpus(tokens, corpName)
+    flog.trace("setupTestNLP: corpus %s prepared", corpName)
+    sbo <- primSetupNLP(tokens, minFreq)
+    flog.info("setupTestNLP: end")
+    sbo
+}
+
+setupVerifNLP <- function(minFreq=10, corpName="verif") {
+    initLibraries()
+    flog.info("setupVerifNLP: start - minFreq = %i", minFreq)
+    tokens <- prepareCorpus("data/split/verif", TRUE)
+    persistCorpus(tokens, corpName)
+    flog.trace("setupVerifNLP: corpus %s prepared", corpName)
+    sbo <- primSetupNLP(tokens, minFreq)
+    flog.info("setupVerifNLP: end")
+    sbo
+}
+
+
+setupSmallTestNLP <- function() {
+    initLibraries()
+    tokens <- prepareTestCorpus("data/test", TRUE)
+    persistCorpus(tokens, "smallTest")
 #    Rprof("rprof.out", append=FALSE)
     primSetupNLP(tokens)
 #    Rprof(NULL)
-}
-
-setupSampleNLP <- function(corpName="sample") {
-    initLibraries()
-    flog.info("setupSampleNLP: start")
-    tokens <- prepareSampleCorpus()
-    persistCorpus(tokens, corpName)
-    flog.trace("setupSampleNLP: corpus prepared")
-    Rprof("rprof.out", append=FALSE)
-    sbo <- primSetupNLP(tokens, 5)
-    Rprof(NULL)
-    flog.info("setupSampleNLP: end")
-    sbo
-}
-
-setupFullNLP <- function(minFreq=10, corpName="full") {
-    initLibraries()
-    flog.info("setupFullNLP: start - minFreq = %i", minFreq)
-    tokens <- prepareFullCorpus()
-    persistCorpus(tokens, corpName)
-    flog.trace("setupFullNLP: corpus prepared")
-    sbo <- primSetupNLP(tokens, minFreq)
-    flog.info("setupFullNLP: end")
-    sbo
 }
 
 primSetupNLP <- function(tokens, minFreq=1) {
@@ -72,22 +82,6 @@ saveKBOModel <- function(kboTables, modelName="model") {
 
 readKBOModel <- function(modelName="model") {
     readRDS(file=paste0("data/model/", modelName, "KBO.rds"))
-}
-
-persistSBOModel <- function(sboTables, modelName="model") {
-    write.csv(sboTables[[4]], file=paste0("data/model/", modelName, "SBO4.csv"), row.names = FALSE)
-    write.csv(sboTables[[3]], file=paste0("data/model/", modelName, "SBO3.csv"), row.names = FALSE)
-    write.csv(sboTables[[2]], file=paste0("data/model/", modelName, "SBO2.csv"), row.names = FALSE)
-    write.csv(sboTables[[1]], file=paste0("data/model/", modelName, "SBO1.csv"), row.names = FALSE)
-}
-
-loadSBOModel <- function(modelName="model") {
-    library(tokenizers)
-    sbo4 <- read.csv(file=paste0("data/model/", modelName, "SBO4.csv"), as.is = TRUE)
-    sbo3 <- read.csv(file=paste0("data/model/", modelName, "SBO3.csv"), as.is = TRUE)
-    sbo2 <- read.csv(file=paste0("data/model/", modelName, "SBO2.csv"), as.is = TRUE)
-    sbo1 <- read.csv(file=paste0("data/model/", modelName, "SBO1.csv"), as.is = TRUE)
-    list(sbo1, sbo2, sbo3, sbo4)
 }
 
 
@@ -127,7 +121,6 @@ loadSBOModel <- function(modelName="model") {
 
 getSBOTables <-  function(dfm1, dfm2, dfm3, dfm4, minFreq=5) {
     tcdfList <- buildTermCountDF(dfm1, dfm2, dfm3, dfm4, minFreq)
-    # tsboList <- buildSBOTables(tcdfList[[1]], tcdfList[[2]], tcdfList[[3]], tcdfList[[4]])
     tsboList <- buildSmoothedBOTables(tcdfList[[1]], tcdfList[[2]], tcdfList[[3]], tcdfList[[4]])
     tsboList
 }
@@ -154,122 +147,93 @@ restartGetSBOTables <- function(file="dfms.rds", minFreq=5) {
 }
 
 #helper function
-restartBuildSBOTables <- function(file="tcdf.rds") {
+restartBuildSmoothedBOTables <- function(file="tcdf.rds") {
     tcdfList <- readRDS(file=paste0("data/temp/", file))
-    buildSBOTables(tcdfList[[1]], tcdfList[[2]], tcdfList[[3]], tcdfList[[4]])
-}
-
-buildSBOTables <- function(df_1, df_2, df_3, df_4) {
-    flog.trace("getSBOTables: primCalculateSBOTables 4")
-    sdf_4 <- primCalculateSBOTables(df_4, df_3)
-    flog.trace("getSBOTables: primCalculateSBOTables 3")
-    sdf_3 <- primCalculateSBOTables(df_3, df_2)
-    flog.trace("getSBOTables: primCalculateSBOTables 2")
-    sdf_2 <- primCalculateSBOTables(df_2, df_1)
-    flog.trace("getSBOTables: primCalculateSBO_1Table 1")
-    sdf_1 <- primCalculateSBO_1Table(df_1)
-    
-    tsbo <- list(sdf_1, sdf_2, sdf_3, sdf_4)
-    saveRDS(tsbo,  file="data/temp/tsbo.rds")
-    tsbo
-}
-
-
-
-primCalculateSBOTables <- function(df_n, df_n_1) {
-    #evaluate the n of the ngram to setup regex
-    n <- length(strsplit(df_n[1,1], " ")[[1]])
-    if (n==4) ngram_1Regex <- "^[^ ]+ [^ ]+ [^ ]+"
-    else if(n==3) ngram_1Regex <- "^[^ ]+ [^ ]+"
-    else if(n==2) ngram_1Regex <- "^[^ ]+"
-    df <- df_n %>% mutate(ngram_1 = str_extract(ngram, ngram_1Regex), nextWord = str_extract(ngram, "[^ ]+$")) %>% select(count, ngram_1, nextWord)
-    
-    distinceNGram_1 <- df %>% distinct(ngram_1)
-    df_n_1_f <- df_n_1 %>% filter(ngram %in% distinceNGram_1$ngram_1) %>% rename(count_1=count)
-    if(nrow(df_n_1_f) != nrow(distinceNGram_1)) {
-        stop("primCalculateSBOTables - issue mit ngrams...")
-    }
-    df <- df %>% left_join(df_n_1_f, by=c("ngram_1" = "ngram"))
-    df <- df %>% mutate(mle=count/count_1) %>% select(ngram_1, nextWord, mle)
-
-    #filter ngrams die auf ein Stopword enden...
-    flog.trace("primCalculateSBOTables - nrows before filtering: %i", nrow(df))
-    sw <- stopwords("en")
-    df <- df %>% filter(!(nextWord %in% sw))
-    flog.trace("primCalculateSBOTables - nrows after filtering stopwords: %i", nrow(df))
-    
-    #keep for sbo only the ngrams with the highest probability per ngram_1
-    #don't filter for the quiz 3 as i need the other probabilities
-    # df <- df %>% group_by(ngram_1) %>% filter(mle==max(mle))
-    # flog.trace("primCalculateSBOTables - nrows after filtering non max mle: %i", nrow(df))
-    
-    df
-}
-
-#
-primCalculateSBO_1Table <- function(df1) {
-    V <- as.integer(count(df1))
-    df <- df1 %>% mutate(mle=count/V) %>% select(nextWord=ngram, mle) 
-    # mle <- numeric(V)
-    # nextWord <- character(V)
-    # for (i in 1:V) {
-    #     if ((i %% 100000) == 0)  {flog.trace("primCalculateSBO_1Table - step %i", i)}
-    #     mle[i] <- df1$count[i] / V
-    #     nextWord[i] <- df1$ngram[i]
-    # }
-    # df <- data.frame(nextWord, mle, stringsAsFactors=FALSE)
-    
-    #filter ngrams die auf ein Stopword enden...
-    flog.trace("primCalculateSBO_1Table - nrows before filtering: %i", nrow(df))
-    sw <- stopwords("en")
-    df <- df %>% filter(!(nextWord %in% sw))
-    flog.trace("primCalculateSBO_1Table - nrows after filtering stopwords: %i", nrow(df))
-    
-    #keep for sbo only tghe ngrams with the highest probability
-    #todo: man könnte noch optimieren und nur im das ngram mit dem höchsten MLE sammeln...
-    #don't filter for the quiz 3 as i need the other probabilities
-    df <- df %>% filter(mle==max(mle))
-    # flog.trace("primCalculateSBO_1Table - nrows after filtering non max mle: %i", nrow(df))
-    df
+    buildSmoothedBOTables(tcdfList[[1]], tcdfList[[2]], tcdfList[[3]], tcdfList[[4]])
 }
 
 #helper function
-filterStopwordNGrams <- function(sboTable) {
-    sw <- stopwords("en")
-    df <- sboTable %>% mutate(ngram_1 = as.character(ngram_1), nextWord = as.character(nextWord))
-    df <- df %>% filter(!(nextWord %in% sw))
-    df
-}
-filterStopword1Grams <- function(sboTable) {
-    sw <- stopwords("en")
-    df <- sboTable %>% mutate(nextWord = as.character(nextWord))
-    df <- df %>% filter(!(nextWord %in% sw))
-    df
+restartBuildTermCountDF <- function(file="dfms.rds", minFreq=5) {
+    dfmsList <- readRDS(file=paste0("data/temp/", file))
+    buildTermCountDF(dfmsList[[1]], dfmsList[[2]], dfmsList[[3]], dfmsList[[4]], minFreq)
 }
 
 
-# just calc the mle for known ngrams, no smoothing...
-# momentan nicht genutzt
-# calcMLE <- function(ngram, df_x, df_x_1) {
-#     #print(ngram)
-#     # helper calculations..
-#     words <- unlist(strsplit(ngram, " "))
-#     nextWord <- words[length(words)]
-#     ngram_1 <- paste(words[-length(words)], collapse = " ")
-#     c_x <- df_x$count[df_x$ngram==ngram]
-#     c_x_1 <- df_x_1$count[df_x_1$ngram==ngram_1]
-#     mle <- c_x / c_x_1
-#     data.frame(ngram_1, nextWord, mle)
+# buildSBOTables <- function(df_1, df_2, df_3, df_4) {
+#     flog.trace("getSBOTables: primCalculateSBOTables 4")
+#     sdf_4 <- primCalculateSBOTables(df_4, df_3)
+#     flog.trace("getSBOTables: primCalculateSBOTables 3")
+#     sdf_3 <- primCalculateSBOTables(df_3, df_2)
+#     flog.trace("getSBOTables: primCalculateSBOTables 2")
+#     sdf_2 <- primCalculateSBOTables(df_2, df_1)
+#     flog.trace("getSBOTables: primCalculateSBO_1Table 1")
+#     sdf_1 <- primCalculateSBO_1Table(df_1)
+#     
+#     tsbo <- list(sdf_1, sdf_2, sdf_3, sdf_4)
+#     saveRDS(tsbo,  file="data/temp/tsbo.rds")
+#     tsbo
 # }
 
-# just calc the mle for known 1-grams, no smoothing...
-# momentan nicht genutzt...
-# calcMLE_1 <- function(nextWord, df_1, V) {
-#     #print(ngram)
-#     c_x <- df_1$count[df_1$ngram==nextWord]
-#     mle <- c_x / V
-#     data.frame(nextWord, mle)
+
+
+# primCalculateSBOTables <- function(df_n, df_n_1) {
+#     #evaluate the n of the ngram to setup regex
+#     n <- length(strsplit(df_n[1,1], " ")[[1]])
+#     if (n==4) ngram_1Regex <- "^[^ ]+ [^ ]+ [^ ]+"
+#     else if(n==3) ngram_1Regex <- "^[^ ]+ [^ ]+"
+#     else if(n==2) ngram_1Regex <- "^[^ ]+"
+#     df <- df_n %>% mutate(ngram_1 = str_extract(ngram, ngram_1Regex), nextWord = str_extract(ngram, "[^ ]+$")) %>% select(count, ngram_1, nextWord)
+#     
+#     distinceNGram_1 <- df %>% distinct(ngram_1)
+#     df_n_1_f <- df_n_1 %>% filter(ngram %in% distinceNGram_1$ngram_1) %>% rename(count_1=count)
+#     if(nrow(df_n_1_f) != nrow(distinceNGram_1)) {
+#         stop("primCalculateSBOTables - issue mit ngrams...")
+#     }
+#     df <- df %>% left_join(df_n_1_f, by=c("ngram_1" = "ngram"))
+#     df <- df %>% mutate(mle=count/count_1) %>% select(ngram_1, nextWord, mle)
+# 
+#     #filter ngrams die auf ein Stopword enden...
+#     flog.trace("primCalculateSBOTables - nrows before filtering: %i", nrow(df))
+#     sw <- stopwords("en")
+#     df <- df %>% filter(!(nextWord %in% sw))
+#     flog.trace("primCalculateSBOTables - nrows after filtering stopwords: %i", nrow(df))
+#     
+#     #keep for sbo only the ngrams with the highest probability per ngram_1
+#     #don't filter for the quiz 3 as i need the other probabilities
+#     # df <- df %>% group_by(ngram_1) %>% filter(mle==max(mle))
+#     # flog.trace("primCalculateSBOTables - nrows after filtering non max mle: %i", nrow(df))
+#     
+#     df
 # }
+
+#
+# primCalculateSBO_1Table <- function(df1) {
+#     V <- as.integer(count(df1))
+#     df <- df1 %>% mutate(mle=count/V) %>% select(nextWord=ngram, mle) 
+#     # mle <- numeric(V)
+#     # nextWord <- character(V)
+#     # for (i in 1:V) {
+#     #     if ((i %% 100000) == 0)  {flog.trace("primCalculateSBO_1Table - step %i", i)}
+#     #     mle[i] <- df1$count[i] / V
+#     #     nextWord[i] <- df1$ngram[i]
+#     # }
+#     # df <- data.frame(nextWord, mle, stringsAsFactors=FALSE)
+#     
+#     #filter ngrams die auf ein Stopword enden...
+#     flog.trace("primCalculateSBO_1Table - nrows before filtering: %i", nrow(df))
+#     sw <- stopwords("en")
+#     df <- df %>% filter(!(nextWord %in% sw))
+#     flog.trace("primCalculateSBO_1Table - nrows after filtering stopwords: %i", nrow(df))
+#     
+#     #keep for sbo only tghe ngrams with the highest probability
+#     #todo: man könnte noch optimieren und nur im das ngram mit dem höchsten MLE sammeln...
+#     #don't filter for the quiz 3 as i need the other probabilities
+#     df <- df %>% filter(mle==max(mle))
+#     # flog.trace("primCalculateSBO_1Table - nrows after filtering non max mle: %i", nrow(df))
+#     df
+# }
+
+
 
 
 #
@@ -302,17 +266,6 @@ buildSmoothedBOTables <- function(df_1, df_2, df_3, df_4) {
     tsbo
 }
 
-#helper function
-restartBuildSmoothedBOTables <- function(file="tcdf.rds") {
-    tcdfList <- readRDS(file=paste0("data/temp/", file))
-    buildSmoothedBOTables(tcdfList[[1]], tcdfList[[2]], tcdfList[[3]], tcdfList[[4]])
-}
-
-#helper function
-restartBuildTermCountDF <- function(file="dfms.rds", minFreq=5) {
-    dfmsList <- readRDS(file=paste0("data/temp/", file))
-    buildTermCountDF(dfmsList[[1]], dfmsList[[2]], dfmsList[[3]], dfmsList[[4]], minFreq)
-}
 
 
 primCalculateSmoothedBOTables <- function(df_n, df_n_1, useAdd1Smoothing) {
@@ -395,6 +348,14 @@ calculateGoodTouringEstimator <- function(k=5, c, kboTable) {
     flog.trace("Good Touring Estimator for c=%i and k=%i :%f", c, k, cStar)
     cStar
 }
+
+getGoodTouringTables <- function(k=5, kboTables) {
+    gt1 <- getGoodTouringTable(k, kboTables[1])
+    gt2 <- getGoodTouringTable(k, kboTables[2])
+    gt3 <- getGoodTouringTable(k, kboTables[2])
+    gt4 <- getGoodTouringTable(k, kboTables[2])
+    list(gt1, gt2, gt3, gt4)
+}
     
 getGoodTouringTable <- function(k=5, kboTable) {
     gttable <- numeric(k)
@@ -411,6 +372,21 @@ getGoodTouringTable <- function(k=5, kboTable) {
         }
     }
     gttable
+}
+
+
+#helper function
+filterStopwordNGrams <- function(sboTable) {
+    sw <- stopwords("en")
+    df <- sboTable %>% mutate(ngram_1 = as.character(ngram_1), nextWord = as.character(nextWord))
+    df <- df %>% filter(!(nextWord %in% sw))
+    df
+}
+filterStopword1Grams <- function(sboTable) {
+    sw <- stopwords("en")
+    df <- sboTable %>% mutate(nextWord = as.character(nextWord))
+    df <- df %>% filter(!(nextWord %in% sw))
+    df
 }
 
 

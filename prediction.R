@@ -164,6 +164,11 @@ getNextWordPredictionTable <- function(ngramKBOTables, text, k=0, alpha=0.4, use
     predDF
 }
 
+
+#####
+# helper functions
+#####
+
 lookupNGram <- function(kboTable, ngram) {
     rows <- kboTable %>% filter(ngram_1 == ngram) %>% arrange(desc(mle))
     rows

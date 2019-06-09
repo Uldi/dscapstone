@@ -1,3 +1,31 @@
+evaluateNLPModel <- function(kboModel, testFile, numTest=0, alpha=0.2) {
+    flog.info("evaluateNLPModel - start, numTests=%i, alpha=%f", numTest, alpha)
+    test4Grams <- readRDS(paste0("data/testing/", testFile))
+    sumSuc <- 0
+    sumMLE <- 0
+    if(numTest==0) n <- nrow(test4Grams)
+    else n <- min(numTest, nrow(test4Grams))
+    flog.trace("evaluateNLPModel num test cases = %i", n)
+    for(i in 1:n) {
+        testCase <- test4Grams[i,]
+        flog.trace("evaluateNLPModel 4gram=%s, 3gram=%s, nextWord=%s", testCase$ngram4, testCase$ngram3, testCase$nextWord)
+        pt <- get4GramTestPredictionTable(kboModel, testCase, alpha)
+        if (nrow(pt)>0) {
+            if (pt[1,2]==testCase$nextWord) {
+                sumSuc <- sumSuc + 1
+                sumMLE <- sumMLE + pt[1,3]
+            } else {
+                rows <- pt %>% filter(nextWord==testCase$nextWord)
+                if(nrow(rows)>0) {
+                    sumMLE <- sumMLE + rows[1,3]
+                }
+            }
+        }
+    }
+    flog.info("evaluateNLPModel - sumSuc=%i, sumMLE=%f", sumSuc, sumMLE)
+}
+
+
 test <- function(kboTables, nTests=0) {
     test4grams <- readRDS(file="data/testing/test4grams.rds")
     successCount <-0

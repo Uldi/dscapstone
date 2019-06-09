@@ -41,5 +41,10 @@ flog.trace("primSetupNLP: getDocFeatureMatrix 1")
     25      2'989       29'181      201'577     63'028
     
     
+evaluateNLPModel(kbo, "test10000.rds",1000, alpha=0.2)
+evaluateNLPModel(kbo, "test10000.rds",1000, alpha=0.3)
+evaluateNLPModel(kbo, "test10000.rds",1000, alpha=0.4)
+    
+    
     
     

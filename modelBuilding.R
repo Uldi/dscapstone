@@ -43,6 +43,24 @@ setupVerifNLP <- function(minFreq=10, corpName="verif") {
     sbo
 }
 
+setupTesting <- function(corpName="test", num4Grams=1000) {
+    initLibraries()
+    flog.info("setupTesting: corpus=%s, num4Grams=%i", corpName, num4Grams)
+    tokens <- prepareCorpus(paste0("data/split/", corpName), TRUE)
+    persistCorpus(tokens, corpName)
+    flog.trace("setupTesting: getDocFeatureMatrix 4")
+    dfm4 <- getDocFeatureMatrix(tokens, 4)
+    n <- min(nfeat(dfm4), num4Grams)
+    flog.trace("setupTesting: get %i samples", n)
+    samples <- featnames(dfm_sample(dfm4, size=n, margin = "features"))
+    ngram_1Regex <- "^[^ ]+ [^ ]+ [^ ]+"
+    df <- data.frame(ngram4=samples, stringsAsFactors = FALSE)
+    df <- df %>% mutate(ngram3 = str_extract(ngram4, ngram_1Regex), nextWord = str_extract(ngram4, "[^ ]+$")) 
+    fileName <- paste0("data/testing/", corpName, num4Grams, ".rds")
+    saveRDS(df, fileName)
+    flog.trace("setupTesting: samples persisted to %s", fileName)
+    df
+}
 
 setupSmallTestNLP <- function() {
     initLibraries()
@@ -235,7 +253,6 @@ restartBuildTermCountDF <- function(file="dfms.rds", minFreq=5) {
 
 
 
-
 #
 # ----------------- La Place Smoothing ---------
 #
@@ -350,10 +367,10 @@ calculateGoodTouringEstimator <- function(k=5, c, kboTable) {
 }
 
 getGoodTouringTables <- function(k=5, kboTables) {
-    gt1 <- getGoodTouringTable(k, kboTables[1])
-    gt2 <- getGoodTouringTable(k, kboTables[2])
-    gt3 <- getGoodTouringTable(k, kboTables[2])
-    gt4 <- getGoodTouringTable(k, kboTables[2])
+    gt1 <- sample.int(1,k, replace=TRUE)
+    gt2 <- getGoodTouringTable(k, kboTables[[2]])
+    gt3 <- getGoodTouringTable(k, kboTables[[3]])
+    gt4 <- getGoodTouringTable(k, kboTables[[4]])
     list(gt1, gt2, gt3, gt4)
 }
     
@@ -367,6 +384,11 @@ getGoodTouringTable <- function(k=5, kboTable) {
             Nc <- nrow(kboTable %>% filter(count==c))  #Nc
 
             cstar <- ((c + 1)*Nc1/Nc - c*(k+1)*Nk1/N1) / (1 - (k+1) * Nk1/N1)
+            if (is.na(cstar)) {
+                gttable[c] <- 1
+            } else {
+                gttable[c] <- cstar/c
+            }
             gttable[c] <- cstar/c
             flog.trace("Good Touring Table entry for c=%i and k=%i :%f", c, k, gttable[c])
         }

@@ -9,6 +9,7 @@ predictNextWord <- function(ngramKBOTables, text) {
 }
 
 #predict using ngram tables approach
+#uses +/- SBO approach
 #return predicted word
 primPredictNextWord <- function(ngramKBOTables, text) {
     
@@ -81,7 +82,17 @@ primPredictNextWord <- function(ngramKBOTables, text) {
 #Algorithmus bei 4-grams beginnen und dann runter iterieren
 #4-gram bedingt ein geschriebenes 3-gram
 #Assumption: k = 0!
-getNextWordPredictionTable <- function(ngramKBOTables, text, k=0, alpha=0.4, useKBO = TRUE) {
+getNextWordPredictionTable <- function(ngramKBOTables, text, k=5, alpha=0.2, useKBO = TRUE) {
+    
+    #Hack to speed up prediction
+    if (!("gtTables" %in% ls(.GlobalEnv))) {
+        gtTables <<- getGoodTouringTables(k, ngramKBOTables)
+        gtTablesK <<- k
+    }
+    if(k != gtTablesK) {
+        gtTables <<- getGoodTouringTables(k, ngramKBOTables)
+        gtTablesK <<- k 
+    }
 
     #ToDo
     #idee wäre hier mit dem tokenizer package den Input zu zerstückeln...
@@ -112,10 +123,10 @@ getNextWordPredictionTable <- function(ngramKBOTables, text, k=0, alpha=0.4, use
         if (!useKBO) {
             # use SBO
             rows <- rows %>% filter(count > k)
-            predDF <- rbind(predDF, rows4)
+            predDF <- rbind(predDF, rows)
         } else {
             #apply GoodTouring Estimator
-            gttable <- getGoodTouringTable(k, ngramKBOTables[[4]])
+            gttable <- gtTables[[4]]
             rowsGreaterK <- rows %>% filter(count>k)
             rowsNotGreaterK <- rows %>% filter(count<=k) %>% mutate(mle = mle * gttable[count])
             predDF <- rbind(predDF, rowsGreaterK, rowsNotGreaterK)
@@ -131,10 +142,10 @@ getNextWordPredictionTable <- function(ngramKBOTables, text, k=0, alpha=0.4, use
         if (!useKBO) {
             # use SBO
             rows <- rows %>% filter(count > k)
-            predDF <- rbind(predDF, rows3)
+            predDF <- rbind(predDF, rows)
         } else {
             #apply GoodTouring Estimator
-            gttable <- getGoodTouringTable(k, ngramKBOTables[[3]])
+            gttable <- gtTables[[3]]
             rowsGreaterK <- rows %>% filter(count>k)
             rowsNotGreaterK <- rows %>% filter(count<=k) %>% mutate(mle = mle * gttable[count])
             predDF <- rbind(predDF, rowsGreaterK, rowsNotGreaterK)
@@ -150,10 +161,10 @@ getNextWordPredictionTable <- function(ngramKBOTables, text, k=0, alpha=0.4, use
         if (!useKBO) {
             # use SBO
             rows <- rows %>% filter(count > k)
-            predDF <- rbind(predDF, rows2)
+            predDF <- rbind(predDF, rows)
         } else {
             #apply GoodTouring Estimator
-            gttable <- getGoodTouringTable(k, ngramKBOTables[[2]])
+            gttable <- gtTables[[2]]
             rowsGreaterK <- rows %>% filter(count>k)
             rowsNotGreaterK <- rows %>% filter(count<=k) %>% mutate(mle = mle * gttable[count])
             predDF <- rbind(predDF, rowsGreaterK, rowsNotGreaterK)
@@ -163,6 +174,183 @@ getNextWordPredictionTable <- function(ngramKBOTables, text, k=0, alpha=0.4, use
     flog.trace("getNextWordPredictionTable - done")
     predDF
 }
+
+get4GramTestPredictionTable <- function(ngramKBOTables, testCase, k=5, alpha=0.2, useKBO = TRUE) {
+    boMethod <- if (useKBO) "KBO" else "SBO"
+    flog.trace("get4GramTestPredictionTable with method=%s, k=%i and alpha=%f", boMethod, k, alpha)
+    
+    #Hack to speed up prediction
+    if (!("gtTables" %in% ls(.GlobalEnv))) {
+        gtTables <<- getGoodTouringTables(k, ngramKBOTables)
+        gtTablesK <<- k
+    }
+    if(k != gtTablesK) {
+        gtTables <<- getGoodTouringTables(k, ngramKBOTables)
+        gtTablesK <<- k 
+    }
+    
+    words <- removeStopwords(testCase$ngram3)
+    ngramWord <- words[length(words)]
+    numWords <- length(words)
+    
+    predDF <- setNames(data.frame(matrix(ncol = 4, nrow = 0)), c("ngram_1", "nextWord", "mle", "count"))
+    
+    #4grams
+    if (numWords >= 3) {
+        last3Words <- paste(words[(numWords-2): numWords], collapse = " ")
+        flog.trace("4-gram: %s", last3Words)
+        rows <- ngramKBOTables[[4]] %>% filter(ngram_1 == last3Words)
+        if (!useKBO) {
+            # use SBO
+            rows <- rows %>% filter(count > k)
+            predDF <- rbind(predDF, rows)
+        } else {
+            #apply GoodTouring Estimator
+            gttable <- gtTables[[4]]
+            rowsGreaterK <- rows %>% filter(count>k)
+            rowsNotGreaterK <- rows %>% filter(count<=k) %>% mutate(mle = mle * gttable[count])
+            predDF <- rbind(predDF, rowsGreaterK, rowsNotGreaterK)
+        }
+    }
+    
+    #3grams
+    if (numWords >= 2) {
+        last2Words <- paste(words[(numWords-1): numWords], collapse = " ")
+        flog.trace("3-gram: %s", last2Words)
+        #apply KB alpha value
+        rows <- ngramKBOTables[[3]] %>% filter(ngram_1 == last2Words) %>% mutate(mle=mle*alpha)
+        if (!useKBO) {
+            # use SBO
+            rows <- rows %>% filter(count > k)
+            predDF <- rbind(predDF, rows)
+        } else {
+            #apply GoodTouring Estimator
+            gttable <- gtTables[[3]]
+            rowsGreaterK <- rows %>% filter(count>k)
+            rowsNotGreaterK <- rows %>% filter(count<=k) %>% mutate(mle = mle * gttable[count])
+            predDF <- rbind(predDF, rowsGreaterK, rowsNotGreaterK)
+        }
+    }
+    
+    #2grams
+    if (numWords >= 1) {
+        lastWord <- words[numWords]
+        flog.trace("2-gram: %s", lastWord)
+        #apply KB alpha value
+        rows <- ngramKBOTables[[2]] %>% filter(ngram_1 == lastWord) %>% mutate(mle=mle*alpha^2)
+        if (!useKBO) {
+            # use SBO
+            rows <- rows %>% filter(count > k)
+            predDF <- rbind(predDF, rows)
+        } else {
+            #apply GoodTouring Estimator
+            gttable <- gtTables[[2]]
+            rowsGreaterK <- rows %>% filter(count>k)
+            rowsNotGreaterK <- rows %>% filter(count<=k) %>% mutate(mle = mle * gttable[count])
+            predDF <- rbind(predDF, rowsGreaterK, rowsNotGreaterK)
+        }
+    } 
+    predDF <- predDF %>% arrange(desc(mle))
+    flog.trace("getNextWordPredictionTable - done")
+    predDF
+}
+
+# getKBOPredictionTable <- function(ngramKBOTables, text, k=5, alpha=0.4, useKBO = TRUE) {
+#     #hack to not to calculate gtTables every time
+#     if (!("gtTables" %in% ls())) {
+#         gtTables <<- getGoodTouringTables(k, ngramKBOTables)
+#         gtTablesK <<- k
+#     }
+#     if(k != gtTablesK) {
+#         gtTables <<- getGoodTouringTables(k, ngramKBOTables)
+#         gtTablesK <<- k 
+#     }
+#     
+#     
+#     
+# }
+# 
+# primGetKBOPredictionTable <- function(ngramKBOTables, gtTables, text, k=5, alpha=0.4, useKBO = TRUE) {
+#     #ToDo
+#     #idee wäre hier mit dem tokenizer package den Input zu zerstückeln...
+#     boMethod <- if (useKBO) "KBO" else "SBO"
+#     flog.trace("getNextWordPredictionTable with method=%s, k=%i and alpha=%f - text to predict %s", boMethod, k, alpha,text)
+#     words <- c()
+#     if (!is.na(text) && (nchar(trimws(text)) > 0)) {
+#         
+#         words <- removeStopwords(text)
+#         flog.trace("getNextWordPredictionTable - text after removing stopwords: %s", paste(words, collapse = " "))
+#     }
+#     
+#     #Algorithmus:
+#     #0-gram --> 1-grams mit höchster P (mle)
+#     #1-gram --> 2-grams mit hächster P (mle) für 1-gram
+#     #2-gram --> 3-grams mit hächster P (mle) für 2-gram
+#     #3-gram --> 4-grams mit hächster P (mle) für 3-gram
+#     ngramWord <- words[length(words)]
+#     numWords <- length(words)
+#     
+#     predDF <- setNames(data.frame(matrix(ncol = 4, nrow = 0)), c("ngram_1", "nextWord", "mle", "count"))
+#     
+#     #4grams
+#     if (numWords >= 3) {
+#         last3Words <- paste(words[(numWords-2): numWords], collapse = " ")
+#         flog.trace("4-gram: %s", last3Words)
+#         rows <- lookupNGram(ngramKBOTables[[4]], last3Words)
+#         if (!useKBO) {
+#             # use SBO
+#             rows <- rows %>% filter(count > k)
+#             predDF <- rbind(predDF, rows4)
+#         } else {
+#             #apply GoodTouring Estimator
+#             gttable <- getGoodTouringTable(k, ngramKBOTables[[4]])
+#             rowsGreaterK <- rows %>% filter(count>k)
+#             rowsNotGreaterK <- rows %>% filter(count<=k) %>% mutate(mle = mle * gttable[count])
+#             predDF <- rbind(predDF, rowsGreaterK, rowsNotGreaterK)
+#         }
+#     }
+#     
+#     #3grams
+#     if (numWords >= 2) {
+#         last2Words <- paste(words[(numWords-1): numWords], collapse = " ")
+#         flog.trace("3-gram: %s", last2Words)
+#         #apply KB alpha value
+#         rows <- lookupNGram(ngramKBOTables[[3]], last2Words) %>% mutate(mle=mle*alpha)
+#         if (!useKBO) {
+#             # use SBO
+#             rows <- rows %>% filter(count > k)
+#             predDF <- rbind(predDF, rows3)
+#         } else {
+#             #apply GoodTouring Estimator
+#             gttable <- getGoodTouringTable(k, ngramKBOTables[[3]])
+#             rowsGreaterK <- rows %>% filter(count>k)
+#             rowsNotGreaterK <- rows %>% filter(count<=k) %>% mutate(mle = mle * gttable[count])
+#             predDF <- rbind(predDF, rowsGreaterK, rowsNotGreaterK)
+#         }
+#     }
+#     
+#     #2grams
+#     if (numWords >= 1) {
+#         lastWord <- words[numWords]
+#         flog.trace("2-gram: %s", lastWord)
+#         #apply KB alpha value
+#         rows <- lookupNGram(ngramKBOTables[[2]], lastWord) %>% mutate(mle=mle*alpha^2)
+#         if (!useKBO) {
+#             # use SBO
+#             rows <- rows %>% filter(count > k)
+#             predDF <- rbind(predDF, rows2)
+#         } else {
+#             #apply GoodTouring Estimator
+#             gttable <- getGoodTouringTable(k, ngramKBOTables[[2]])
+#             rowsGreaterK <- rows %>% filter(count>k)
+#             rowsNotGreaterK <- rows %>% filter(count<=k) %>% mutate(mle = mle * gttable[count])
+#             predDF <- rbind(predDF, rowsGreaterK, rowsNotGreaterK)
+#         }
+#     } 
+#     predDF <- predDF %>% arrange(desc(mle)) #%>% top_n(10, mle)
+#     flog.trace("getNextWordPredictionTable - done")
+#     predDF
+# }
 
 
 #####

@@ -32,14 +32,34 @@ shinyServer(function(input, output, session) {
     text <- ""
     flog.info("load NLP prediction model - completed")
     
-
-# UI handling... 
+    # predictedText <- reactive({
+    #     textInput <- input$textInput
+    #     predictNextWord(ngramKBOTables, textInput)
+    # })
     
+    predTable <- reactive({
+        textInput <- input$dynText
+        predTable <- getNextWordPredictionTable(ngramKBOTables, textInput, filterStopwords=filterStopwords)
+    })
+    
+    
+    output$textDebug<- renderPrint({ predictedText() })
+    output$textOutput <- renderText({predictedText()})
+    
+    output$predictionTable <- DT::renderDataTable(
+        DT::datatable(isolate({predTable()}), options = list(pageLength = 15))
+    )
+    
+    proxy <- dataTableProxy('predictionTable', session)
     observe({
         textInput = input$dynText
-
+        kValue = input$kValue
+        alpha = input$alpha
+        useKBO = input$kboCheckbox
+        #hier habe ich noch ein loop problem...
         if(grepl("  $", textInput)) {
             updateTextInput(session,"dynText",value=predictNextWord(ngramKBOTables, textInput, filterStopwords=filterStopwords))
+            replaceData(proxy, getNextWordPredictionTable(ngramKBOTables, textInput, kValue, alpha, useKBO, filterStopwords=filterStopwords))
         } else if (grepl("[\\.!?;,:]$", textInput)) {
             text <<- paste(text, textInput, sep=" ")
             updateTextInput(session, "dynText", value="")

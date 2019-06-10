@@ -1,17 +1,28 @@
 
 #predict using ngram tables approach
 #return orginial text appended with predicted word
-predictNextWord <- function(ngramKBOTables, text) {
-    nextWord <- primPredictNextWord(ngramKBOTables, text)
-    
+predictNextWord <- function(ngramKBOTables, text, filterStopwords=TRUE) {
+    nextWord <- primPredictNextWord(ngramKBOTables, text, filterStopwords)
+    nextWord <- primPredictNextWordKBO(ngramKBOTables, text, filterStopwords)
     #return orginial text appended with next word
     trimws(paste(trimws(text), nextWord,sep = " "))
+}
+
+primPredictNextWordKBO <- function(ngramKBOTables, text, filterStopwords=TRUE) {
+    pt <- getNextWordPredictionTable(ngramKBOTables, text, k=5, alpha=0.4, useKBO = TRUE, filterStopwords=filterStopwords)
+    if(nrow(pt)>0) nextWord <- pt[1,2]
+    else {
+        rows <- ngramKBOTables[[1]]
+        nextWord <- rows[1,1]
+    }
+    flog.trace("primPredictNextWordKBO: %s", nextWord)
+    nextWord
 }
 
 #predict using ngram tables approach
 #uses +/- SBO approach
 #return predicted word
-primPredictNextWord <- function(ngramKBOTables, text) {
+primPredictNextWord <- function(ngramKBOTables, text, filterStopwords=TRUE) {
     
     #ToDo
     #idee wäre hier mit dem tokenizer package den Input zu zerstückeln...
@@ -19,7 +30,7 @@ primPredictNextWord <- function(ngramKBOTables, text) {
     words <- c()
     if (!is.na(text) && (nchar(trimws(text)) > 0)) {
         
-        words <- removeStopwords(text)
+        words <- removeStopwords(text, filterStopwords = filterStopwords)
         flog.trace("primPredictSBONLP - text after removing stopwords: %s", paste(words, collapse = " "))
     }
     
@@ -82,7 +93,7 @@ primPredictNextWord <- function(ngramKBOTables, text) {
 #Algorithmus bei 4-grams beginnen und dann runter iterieren
 #4-gram bedingt ein geschriebenes 3-gram
 #Assumption: k = 0!
-getNextWordPredictionTable <- function(ngramKBOTables, text, k=5, alpha=0.2, useKBO = TRUE) {
+getNextWordPredictionTable <- function(ngramKBOTables, text, k=5, alpha=0.2, useKBO = TRUE, filterStopwords=TRUE) {
     
     #Hack to speed up prediction
     if (!("gtTables" %in% ls(.GlobalEnv))) {
@@ -101,7 +112,7 @@ getNextWordPredictionTable <- function(ngramKBOTables, text, k=5, alpha=0.2, use
     words <- c()
     if (!is.na(text) && (nchar(trimws(text)) > 0)) {
         
-        words <- removeStopwords(text)
+        words <- removeStopwords(text, filterStopwords = filterStopwords)
         flog.trace("getNextWordPredictionTable - text after removing stopwords: %s", paste(words, collapse = " "))
     }
     

@@ -98,8 +98,8 @@ saveKBOModel <- function(kboTables, modelName="model") {
     saveRDS(kboTables, file=paste0("data/model/", modelName, "KBO.rds"))
 }
 
-readKBOModel <- function(modelName="model") {
-    readRDS(file=paste0("data/model/", modelName, "KBO.rds"))
+readKBOModel <- function(modelName="model", dir="data/model/") {
+    readRDS(file=paste0(dir, modelName, "KBO.rds"))
 }
 
 
@@ -365,6 +365,16 @@ calculateGoodTouringEstimator <- function(k=5, c, kboTable) {
     flog.trace("Good Touring Estimator for c=%i and k=%i :%f", c, k, cStar)
     cStar
 }
+
+saveGTTables <- function(gtTables) {
+    saveRDS(gtTables, file="data/model/gtTables.rds")
+}
+
+readGTTables <- function() {
+    flog.trace("readGTtables")
+    readRDS(file="data/model/gtTables.rds")
+}
+
 
 getGoodTouringTables <- function(k=5, kboTables) {
     gt1 <- sample.int(1,k, replace=TRUE)

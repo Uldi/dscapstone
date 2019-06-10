@@ -35,9 +35,15 @@ shinyServer(function(input, output, session) {
 
 # UI handling... 
     
+    observeEvent(input$predict, {
+        flog.trace("observeEvent")
+        textInput = input$dynText
+        updateTextInput(session,"dynText",value=predictNextWord(ngramKBOTables, textInput, filterStopwords=filterStopwords))
+    })
+    
     observe({
         textInput = input$dynText
-
+        flog.trace("observe")
         if(grepl("  $", textInput)) {
             # flog.trace("observe: %s", textInput)
             updateTextInput(session,"dynText",value=predictNextWord(ngramKBOTables, textInput, filterStopwords=filterStopwords))

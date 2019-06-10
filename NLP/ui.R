@@ -18,13 +18,16 @@ shinyUI(fluidPage(
         h4("Enter your text - get next word predicted"), 
         h5("Instruction:"),
         tags$ul(
-            tags$li("for inline word prediction just enter 2 spaces"),
+            tags$li("for inline word prediction just enter 2 spaces or click on predict"),
             tags$li("type a punctuation to start a new sentence"),
             tags$li("give shinyapps.io a few seconds to load the model")
         ),
         
-        fluidRow(column(12, textInput("dynText", label=NULL, value="", width="100%"))),
-        fluidRow(column(12, textOutput("fixedText"))),
+        fluidRow(
+            column(10, textInput("dynText", label=NULL, value="", width="100%")),
+            column(2, actionButton("predict", label="predict"))
+            ),
+        fluidRow(column(10, textOutput("fixedText"))),
         hr()
     )
 ))

@@ -19,7 +19,8 @@ shinyUI(fluidPage(
         h5("Instruction:"),
         tags$ul(
             tags$li("for inline word prediction just enter 2 spaces"),
-            tags$li("type a punctuation to start a new sentence")
+            tags$li("type a punctuation to start a new sentence"),
+            tags$li("give shinyapps.io a few seconds to load the model")
         ),
         
         fluidRow(column(12, textInput("dynText", label=NULL, value="", width="100%"))),

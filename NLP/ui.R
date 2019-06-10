@@ -15,7 +15,7 @@ shinyUI(fluidPage(
         titlePanel("DS Capstone Project"),
         h4("David Ulrich"),
         hr(),
-        h4("Enter your text and get the next word predicted"), 
+        h4("Enter your text - get next word predicted"), 
         h5("Instruction:"),
         tags$ul(
             tags$li("for inline word prediction just enter 2 spaces"),

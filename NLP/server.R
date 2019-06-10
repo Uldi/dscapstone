@@ -22,7 +22,7 @@ source('modelBuilding.R')
 shinyServer(function(input, output, session) {
    
     flog.info("load NLP prediction model")
-    flog.threshold(TRACE)
+    flog.threshold(INFO)
     # setwd("/Users/david/Coursera/assignments/dscapstone")
     flog.trace(getwd())
     ngramKBOTables <- readKBOModel(modelName="model") 

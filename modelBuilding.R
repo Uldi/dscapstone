@@ -43,10 +43,10 @@ setupVerifNLP <- function(minFreq=10, corpName="verif") {
     sbo
 }
 
-setupTesting <- function(corpName="test", num4Grams=1000) {
+setupTesting <- function(corpName="test", num4Grams=1000, filterStopwords=TRUE) {
     initLibraries()
-    flog.info("setupTesting: corpus=%s, num4Grams=%i", corpName, num4Grams)
-    tokens <- prepareCorpus(paste0("data/split/", corpName), TRUE)
+    flog.info("setupTesting: corpus=%s, num4Grams=%i, filterStopwords=%s", corpName, num4Grams, filterStopwords)
+    tokens <- prepareCorpus(paste0("data/split/", corpName), filterStopwords)
     persistCorpus(tokens, corpName)
     flog.trace("setupTesting: getDocFeatureMatrix 4")
     dfm4 <- getDocFeatureMatrix(tokens, 4)

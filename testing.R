@@ -1,5 +1,5 @@
-evaluateNLPModel <- function(kboModel, testFile, numTest=0, alpha=0.2) {
-    flog.info("evaluateNLPModel - start, numTests=%i, alpha=%f", numTest, alpha)
+evaluateNLPModel <- function(kboModel, testFile, numTest=0, alpha=0.2, filterStopwords=TRUE) {
+    flog.info("evaluateNLPModel - start, numTests=%i, alpha=%f, filterStopwords=%s", numTest, alpha, filterStopwords)
     test4Grams <- readRDS(paste0("data/testing/", testFile))
     sumSuc <- 0
     sumMLE <- 0
@@ -9,7 +9,7 @@ evaluateNLPModel <- function(kboModel, testFile, numTest=0, alpha=0.2) {
     for(i in 1:n) {
         testCase <- test4Grams[i,]
         flog.trace("evaluateNLPModel 4gram=%s, 3gram=%s, nextWord=%s", testCase$ngram4, testCase$ngram3, testCase$nextWord)
-        pt <- get4GramTestPredictionTable(kboModel, testCase, alpha)
+        pt <- get4GramTestPredictionTable(kboModel, testCase, alpha=alpha, filterStopwords =  filterStopwords)
         if (nrow(pt)>0) {
             if (pt[1,2]==testCase$nextWord) {
                 sumSuc <- sumSuc + 1

@@ -16,7 +16,7 @@ shinyUI(fluidPage(
         h4("David Ulrich"),
         hr(),
         h4("Enter your text and get the next word predicted"), 
-        h5("Instructions:"),
+        h5("Instruction:"),
         tags$ul(
             tags$li("for inline word prediction just enter 2 spaces"),
             tags$li("type a punctuation to start a new sentence")

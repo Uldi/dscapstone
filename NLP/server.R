@@ -39,6 +39,7 @@ shinyServer(function(input, output, session) {
         textInput = input$dynText
 
         if(grepl("  $", textInput)) {
+            # flog.trace("observe: %s", textInput)
             updateTextInput(session,"dynText",value=predictNextWord(ngramKBOTables, textInput, filterStopwords=filterStopwords))
         } else if (grepl("[\\.!?;,:]$", textInput)) {
             text <<- paste(text, textInput, sep=" ")

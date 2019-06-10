@@ -9,7 +9,7 @@ evaluateNLPModel <- function(kboModel, testFile, numTest=0, alpha=0.2, filterSto
     for(i in 1:n) {
         testCase <- test4Grams[i,]
         flog.trace("evaluateNLPModel 4gram=%s, 3gram=%s, nextWord=%s", testCase$ngram4, testCase$ngram3, testCase$nextWord)
-        pt <- get4GramTestPredictionTable(kboModel, testCase, alpha=alpha, filterStopwords =  filterStopwords)
+        pt <- get4GramTestPredictionTable(kboModel, testCase$ngram3, alpha=alpha, filterStopwords =  filterStopwords)
         if (nrow(pt)>0) {
             if (pt[1,2]==testCase$nextWord) {
                 sumSuc <- sumSuc + 1
@@ -25,6 +25,42 @@ evaluateNLPModel <- function(kboModel, testFile, numTest=0, alpha=0.2, filterSto
     flog.info("evaluateNLPModel - sumSuc=%i, sumMLE=%f", sumSuc, sumMLE)
 }
 
+
+evaluateNLPModel2 <- function(kboModel, testCorpus, numTest=0, alpha=0.2, filterStopwords=TRUE) {
+    flog.info("evaluateNLPModel - start, numTests=%i, alpha=%f, filterStopwords=%s", numTest, alpha, filterStopwords)
+    
+    corp <- loadPersistedCorpus(testCorpus)
+    
+    
+    sumSuc <- 0
+    sumMLE <- 0
+    if(numTest==0) n <- length(corp)
+    else n <- min(numTest, nrow(corp))
+    flog.trace("evaluateNLPModel num test cases = %i", n)
+    for(i in 1:n) {
+        testLine <- corp[i]
+        words <- removeStopwords(testLine, FALSE)
+        j <- length(words)
+        while((j >=1) && (words[j] %in% myStopwords(TRUE))) j <- j -1
+        sentence <- paste(words[1:j-1], collapse=" ")
+        nw <- words[j]
+        
+        flog.trace("evaluateNLPModel sentence=%s, nextWord=%s", sentence, nw)
+        pt <- get4GramTestPredictionTable(kboModel, sentence, alpha=alpha, filterStopwords =  filterStopwords)
+        if (nrow(pt)>0) {
+            if (pt[1,2]==nw) {
+                sumSuc <- sumSuc + 1
+                sumMLE <- sumMLE + pt[1,3]
+            } else {
+                rows <- pt %>% filter(nextWord==nw)
+                if(nrow(rows)>0) {
+                    sumMLE <- sumMLE + rows[1,3]
+                }
+            }
+        }
+    }
+    flog.info("evaluateNLPModel - sumSuc=%i, sumMLE=%f", sumSuc, sumMLE)
+}
 
 test <- function(kboTables, nTests=0) {
     test4grams <- readRDS(file="data/testing/test4grams.rds")

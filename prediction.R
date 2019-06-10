@@ -175,7 +175,7 @@ getNextWordPredictionTable <- function(ngramKBOTables, text, k=5, alpha=0.2, use
     predDF
 }
 
-get4GramTestPredictionTable <- function(ngramKBOTables, testCase, k=5, alpha=0.2, useKBO = TRUE, filterStopwords=TRUE) {
+get4GramTestPredictionTable <- function(ngramKBOTables, testSentence, k=5, alpha=0.2, useKBO = TRUE, filterStopwords=TRUE) {
     boMethod <- if (useKBO) "KBO" else "SBO"
     flog.trace("get4GramTestPredictionTable with method=%s, k=%i and alpha=%f", boMethod, k, alpha)
     
@@ -189,7 +189,7 @@ get4GramTestPredictionTable <- function(ngramKBOTables, testCase, k=5, alpha=0.2
         gtTablesK <<- k 
     }
     
-    words <- removeStopwords(testCase$ngram3, filterStopwords)
+    words <- removeStopwords(testSentence, filterStopwords)
     ngramWord <- words[length(words)]
     numWords <- length(words)
     

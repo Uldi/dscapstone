@@ -323,7 +323,7 @@ primCalculateSmoothedBOTables <- function(df_n, df_n_1, useAdd1Smoothing) {
     
     #keep for sbo only the ngrams with the highest probability per ngram_1
     #don't filter for the quiz 3 as i need the other probabilities
-    df <- df %>% group_by(ngram_1) %>% filter(mle==max(mle))
+    df <- df %>% group_by(ngram_1) %>% filter(mle==max(mle)) %>% ungroup()
     flog.trace("primCalculateSBOTables - nrows after filtering non max mle: %i", nrow(df))
     
     df

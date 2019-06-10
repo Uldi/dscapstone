@@ -12,8 +12,8 @@ library(shiny)
 # Define UI for application that draws a histogram
 shinyUI(fluidPage(
     verticalLayout(
-        titlePanel("DS Capstone Project"),
-        h4("David Ulrich"),
+        titlePanel("Predict Next Word"),
+        h4("DS Capstone Project, David Ulrich, June 2019"),
         hr(),
         h4("Enter your text - get next word predicted"), 
         h5("Instruction:"),
@@ -22,11 +22,12 @@ shinyUI(fluidPage(
             tags$li("type a punctuation to start a new sentence"),
             tags$li("give shinyapps.io a few seconds to load the model")
         ),
-        
+        br(),
         fluidRow(
             column(10, textInput("dynText", label=NULL, value="", width="100%")),
             column(2, actionButton("predict", label="predict"))
             ),
+        br(),
         fluidRow(column(10, textOutput("fixedText"))),
         hr()
     )

@@ -1,0 +1,55 @@
+---
+title: "DS Capstone - Predict Next Word"
+author: "David Ulrich"
+date: "15 6 2019"
+output: ioslides_presentation
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+## Needed Content
+
+A slide deck consisting of no more than 5 slides created with R Studio Presenter pitching your algorithm and app as if you were presenting to your boss or an investor.
+
+- Does the link lead to a 5 slide deck on R Pubs?
+- Does the slide deck contain a description of the algorithm used to make the prediction?
+- Does the slide deck describe the app, give instructions, and describe how it functions?
+- How would you describe the experience of using this app?
+- Does the app present a novel approach and/or is particularly well done?
+- Would you hire this person for your own data science startup company?
+
+## about the app, ...
+
+## setup corpus, cleaning
+tbd
+
+## model building approach
+algorithmus
+sbo
+no Laplace add-1 smoothing
+kbo good touring
+
+## testing, tuning, performance
+with/without SW
+filtering nextword when SW
+filterning auf max(mle) per ngram
+
+## The Shiny App - Predict Next Word
+<div class = "row">
+<div class = "col-md-6">
+- Screenshot ![Shinyapp screenshot](fig/pnw.png)
+- Link https://...
+</div>
+<div class = "col-md-6">
+Erläuterung...
+- loads model on startup
+- uses Katz back-off
+- allows a natural typing of text and prediction of the next word on demand
+</div>
+</div>
+
+
+
+

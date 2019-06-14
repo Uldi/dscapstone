@@ -12,6 +12,7 @@ library(DT)
 library(futile.logger)
 library(dplyr)
 library(quanteda)
+library(pryr)
 source('prediction.R')
 source('loaddata.R')
 source('corpusFunctions.R')
@@ -22,10 +23,13 @@ source('modelBuilding.R')
 shinyServer(function(input, output, session) {
    
     flog.info("load NLP prediction model")
-    flog.threshold(INFO)
+    flog.threshold(TRACE)
     # setwd("/Users/david/Coursera/assignments/dscapstone")
     flog.trace(getwd())
+    flog.trace("Mem Used: %f:", mem_used())
     ngramKBOTables <- readKBOModel(modelName="model") 
+    flog.trace("model size %f=", object.size(ngramKBOTables))
+    flog.trace("Mem Used: %f:", mem_used())
     gtTables <<- readGTTables()
     gtTablesK <<- 5
     filterStopwords = FALSE

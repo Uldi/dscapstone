@@ -1,5 +1,5 @@
 ---
-title: "DS Capstone - Predict Next Word"
+title: "Predict Next Word"
 author: "David Ulrich"
 date: "15.06.2019"
 output: ioslides_presentation
@@ -20,44 +20,54 @@ A slide deck consisting of no more than 5 slides created with R Studio Presenter
 - Does the app present a novel approach and/or is particularly well done?
 - Would you hire this person for your own data science startup company?
 
-## about the app, ...
+## The Assignment: Predict Next Word
+The Datascience Capstone assignment is to predict the next word based on a model to be trained out of a provided text corpus. The idea is to create something similar to the wellknown SwiftKey app.
 
-## setup corpus, cleaning, model approaches
-train model, test, verif split
-sbo
-no Laplace add-1 smoothing
-with or without stopwors
+- text corpus based on about 600MB of US english news, twitter and blog texts
+- corpus split into training (90%), test (5%) and verification (5%) data
+- corpus cleaned by removal of white space, profanity words, punctuation, numbers, urls etc.
+- basic idea is to train a model on n-grams, 4-, 3-, 2- and 1-grams in my case
+- used Quanteda package to clean the corpus and build the n-grams
 
-tm, speedup mit quanteda
-dplyr instead of for loops to generate MLE/P --> factor >1000
+
+## Model Building Approaches
+During the model building phase, I tried several different approaches
+
+- First tests used TM/RWeka for tokenization and n-gram building, showed to be rather slow --> switched to Quanteda
+- First version of model used Stupid Backoff approach without any smoothing. See https://www.aclweb.org/anthology/D07-1090.pdf for details. Seemed to work well for large training corpus.
+- Next version used the Laplace Add-1 smoothing. But the results didn't improve the prediction rate.
+- Tested models with/without stopwords included and models with different minimal counts per stopwords
+- Improved training duration by factors using dpylr package
 
 ## model building final approach
-algorithmus
-kbo good touring, mit Formel
-with stopwords
+For the final model I decided to use the following algorithm
 
-## testing, tuning, performance
-with/without SW
-filtering nextword when SW
-filterning auf max(mle) per ngram
-model as rds
-reduced model: only 4 grams which have been seen more than once
+- Katz Back-Off algorithm to back-off to lower n-1 grams if not found in n grams
+- Good Touring
+- Keep stopwords in corpus
+- tbd
+
+## Final Model Tuning
+In order to use the model as part of the shiny app, some model tuning (reduction in size) was needed
+
+- Removed all ngrams that end with a stopword as the prediction of a stopword does add much value
+- Kept only the ngram/next word combinations with the highest probabilities
+- Removed all the ngrams which occured only once in the corpus
+- Saved ngram tables as RDS files, one file per ngram size (1-4)
+--> this resulted in a reduction of the initial model size to less than 200MB
 
 ## The Shiny App - Predict Next Word
 <div class="columns-2">
 <img src="fig/pnw.png" alt="Shinyapp screensho" width="100%">
 
-- Link https://...
-
 Main features 
 
 - loads model on startup
 - uses Katz back-off with Good Touring 
-- allows a natural typing of text and prediction of the next word on demand
+- allows a natural typing of text
+- provides prediction of the next word on demand
 </div>
-
-## steinbruch
-- Screenshot ![Shinyapp screenshot](fig/pnw.png)
+https://uldi8400.shinyapps.io/David_DSCapstone/
 
 
 

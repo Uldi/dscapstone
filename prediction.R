@@ -2,7 +2,7 @@
 #predict using ngram tables approach
 #return orginial text appended with predicted word
 predictNextWord <- function(ngramKBOTables, text, filterStopwords=TRUE) {
-    nextWord <- primPredictNextWord(ngramKBOTables, text, filterStopwords)
+    # nextWord <- primPredictNextWord(ngramKBOTables, text, filterStopwords)
     nextWord <- primPredictNextWordKBO(ngramKBOTables, text, filterStopwords)
     #return orginial text appended with next word
     trimws(paste(trimws(text), nextWord,sep = " "))

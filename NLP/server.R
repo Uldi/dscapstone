@@ -8,7 +8,6 @@
 #
 
 library(shiny)
-library(DT)
 library(futile.logger)
 library(dplyr)
 library(quanteda)
@@ -27,8 +26,15 @@ shinyServer(function(input, output, session) {
     # setwd("/Users/david/Coursera/assignments/dscapstone")
     flog.trace(getwd())
     flog.trace("Mem Used: %f:", mem_used())
-    ngramKBOTables <- readKBOModel(modelName="model") 
-    flog.trace("model size %f=", object.size(ngramKBOTables))
+    
+    kbo1 <- readRDS("data/model/modelKBO1.rds")
+    kbo2 <- readRDS("data/model/modelKBO1.rds")
+    kbo3 <- readRDS("data/model/modelKBO1.rds")
+    kbo4 <- readRDS("data/model/modelKBO1.rds")
+    kbo <- list(kbo1, kbo2, kbo3, kbo4)
+    
+    # ngramKBOTables <- readKBOModel(modelName="model") 
+    flog.trace("model size %f=", object.size(kbo))
     flog.trace("Mem Used: %f:", mem_used())
     gtTables <<- readGTTables()
     gtTablesK <<- 5
@@ -42,7 +48,7 @@ shinyServer(function(input, output, session) {
     observeEvent(input$predict, {
         flog.trace("observeEvent")
         textInput = input$dynText
-        updateTextInput(session,"dynText",value=predictNextWord(ngramKBOTables, textInput, filterStopwords=filterStopwords))
+        updateTextInput(session,"dynText",value=predictNextWord(kbo, textInput, filterStopwords=filterStopwords))
     })
     
     observe({
@@ -50,7 +56,7 @@ shinyServer(function(input, output, session) {
         flog.trace("observe")
         if(grepl("  $", textInput)) {
             # flog.trace("observe: %s", textInput)
-            updateTextInput(session,"dynText",value=predictNextWord(ngramKBOTables, textInput, filterStopwords=filterStopwords))
+            updateTextInput(session,"dynText",value=predictNextWord(kbo, textInput, filterStopwords=filterStopwords))
         } else if (grepl("[\\.!?;,:]$", textInput)) {
             text <<- paste(text, textInput, sep=" ")
             updateTextInput(session, "dynText", value="")

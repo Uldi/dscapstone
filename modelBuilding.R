@@ -415,8 +415,10 @@ prepareShinyModel <- function(kbo) {
     kbo3 <- kbo[[3]] %>% select(ngram_1, nextWord, mle)
     #only filter 4grams to reduce model to 4grams seen more than once
     kbo4 <- kbo[[4]] %>% filter(count > 1) %>% select(ngram_1, nextWord, mle)
-    kboD <- list(kbo1, kbo2, kbo3, kbo4)
-    saveRDS(kboD, "data/deployment/modelKBO.rds")
+    saveRDS(kbo1, "data/deployment/modelKBO1.rds")
+    saveRDS(kbo2, "data/deployment/modelKBO2.rds")
+    saveRDS(kbo3, "data/deployment/modelKBO3.rds")
+    saveRDS(kbo4, "data/deployment/modelKBO4.rds")
 }
 
 

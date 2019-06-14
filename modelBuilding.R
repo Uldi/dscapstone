@@ -410,11 +410,11 @@ prepareShinyModel <- function(kbo) {
     gtTables <- getGoodTouringTables(5, kbo)
     saveGTTables(gtTables, "data/deployment/gtTables.rds")
     
-    kbo1 <- kbo[[1]] %>% select(nextWord, mle)
-    kbo2 <- kbo[[2]] %>% select(ngram_1, nextWord, mle)
-    kbo3 <- kbo[[3]] %>% select(ngram_1, nextWord, mle)
+    kbo1 <- kbo[[1]]
+    kbo2 <- kbo[[2]]
+    kbo3 <- kbo[[3]]
     #only filter 4grams to reduce model to 4grams seen more than once
-    kbo4 <- kbo[[4]] %>% filter(count > 1) %>% select(ngram_1, nextWord, mle)
+    kbo4 <- kbo[[4]] %>% filter(count > 1)
     saveRDS(kbo1, "data/deployment/modelKBO1.rds")
     saveRDS(kbo2, "data/deployment/modelKBO2.rds")
     saveRDS(kbo3, "data/deployment/modelKBO3.rds")

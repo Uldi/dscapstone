@@ -366,8 +366,8 @@ calculateGoodTouringEstimator <- function(k=5, c, kboTable) {
     cStar
 }
 
-saveGTTables <- function(gtTables) {
-    saveRDS(gtTables, file="data/model/gtTables.rds")
+saveGTTables <- function(gtTables, fileName="data/model/gtTables.rds") {
+    saveRDS(gtTables, file=fileName)
 }
 
 readGTTables <- function() {
@@ -404,6 +404,18 @@ getGoodTouringTable <- function(k=5, kboTable) {
         }
     }
     gttable
+}
+
+prepareShinyModel <- function(kbo) {
+    gtTables <- getGoodTouringTables(5, kbo)
+    saveGTTables(gtTables, "data/deployment/gtTables.rds")
+    
+    kbo1 <- kbo[[1]] %>% select(nextWord, mle)
+    kbo2 <- kbo[[2]] %>% select(ngram_1, nextWord, mle)
+    kbo3 <- kbo[[3]] %>% select(ngram_1, nextWord, mle)
+    kbo4 <- kbo[[4]] %>% select(ngram_1, nextWord, mle)
+    kboD <- list(kbo1, kbo2, kbo3, kbo4)
+    saveRDS(kboD, "data/deployment/modelKBO.rds")
 }
 
 

@@ -22,19 +22,25 @@ A slide deck consisting of no more than 5 slides created with R Studio Presenter
 
 ## about the app, ...
 
-## setup corpus, cleaning
-tbd
-
-## model building approach
-algorithmus
+## setup corpus, cleaning, model approaches
+train model, test, verif split
 sbo
 no Laplace add-1 smoothing
-kbo good touring
+with or without stopwors
+
+tm, speedup mit quanteda
+dplyr instead of for loops to generate MLE/P --> factor >1000
+
+## model building final approach
+algorithmus
+kbo good touring, mit Formel
+with stopwords
 
 ## testing, tuning, performance
 with/without SW
 filtering nextword when SW
 filterning auf max(mle) per ngram
+model as rds
 
 ## The Shiny App - Predict Next Word
 <div class = "row">

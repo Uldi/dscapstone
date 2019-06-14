@@ -1,7 +1,7 @@
 ---
 title: "DS Capstone - Predict Next Word"
 author: "David Ulrich"
-date: "15 6 2019"
+date: "15.06.2019"
 output: ioslides_presentation
 ---
 
@@ -41,21 +41,23 @@ with/without SW
 filtering nextword when SW
 filterning auf max(mle) per ngram
 model as rds
+reduced model: only 4 grams which have been seen more than once
 
 ## The Shiny App - Predict Next Word
-<div class = "row">
-<div class = "col-md-6">
-- Screenshot ![Shinyapp screenshot](fig/pnw.png)
+<div class="columns-2">
+<img src="fig/pnw.png" alt="Shinyapp screensho" width="100%">
+
 - Link https://...
-</div>
-<div class = "col-md-6">
-Erläuterung...
+
+Main features 
+
 - loads model on startup
-- uses Katz back-off
+- uses Katz back-off with Good Touring 
 - allows a natural typing of text and prediction of the next word on demand
 </div>
-</div>
 
+## steinbruch
+- Screenshot ![Shinyapp screenshot](fig/pnw.png)
 
 
 

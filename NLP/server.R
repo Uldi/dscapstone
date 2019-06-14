@@ -22,20 +22,19 @@ source('modelBuilding.R')
 shinyServer(function(input, output, session) {
    
     flog.info("load NLP prediction model")
-    flog.threshold(TRACE)
+    flog.threshold(INFO)
     # setwd("/Users/david/Coursera/assignments/dscapstone")
     flog.trace(getwd())
-    flog.trace("Mem Used: %f:", mem_used())
-    
+    flog.trace("load 1")
     kbo1 <- readRDS("data/model/modelKBO1.rds")
+    flog.trace("load 2")
     kbo2 <- readRDS("data/model/modelKBO2.rds")
+    flog.trace("load 3")
     kbo3 <- readRDS("data/model/modelKBO3.rds")
+    flog.trace("load 4")
     kbo4 <- readRDS("data/model/modelKBO4.rds")
     kbo <- list(kbo1, kbo2, kbo3, kbo4)
     
-    # ngramKBOTables <- readKBOModel(modelName="model") 
-    flog.trace("model size %f=", object.size(kbo))
-    flog.trace("Mem Used: %f:", mem_used())
     gtTables <<- readGTTables()
     gtTablesK <<- 5
     filterStopwords = FALSE

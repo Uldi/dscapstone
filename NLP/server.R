@@ -28,9 +28,9 @@ shinyServer(function(input, output, session) {
     flog.trace("Mem Used: %f:", mem_used())
     
     kbo1 <- readRDS("data/model/modelKBO1.rds")
-    kbo2 <- readRDS("data/model/modelKBO1.rds")
-    kbo3 <- readRDS("data/model/modelKBO1.rds")
-    kbo4 <- readRDS("data/model/modelKBO1.rds")
+    kbo2 <- readRDS("data/model/modelKBO2.rds")
+    kbo3 <- readRDS("data/model/modelKBO3.rds")
+    kbo4 <- readRDS("data/model/modelKBO4.rds")
     kbo <- list(kbo1, kbo2, kbo3, kbo4)
     
     # ngramKBOTables <- readKBOModel(modelName="model") 

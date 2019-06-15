@@ -35,7 +35,7 @@ shinyServer(function(input, output, session) {
     kbo4 <- readRDS("data/model/modelKBO4.rds")
     kbo <- list(kbo1, kbo2, kbo3, kbo4)
     
-    gtTables <<- readGTTables()
+    gtTables <<- readRDS(file="data/model/gtTables.rds")
     gtTablesK <<- 5
     
     filterStopwords = FALSE

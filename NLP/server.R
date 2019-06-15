@@ -11,11 +11,11 @@ library(shiny)
 library(futile.logger)
 library(dplyr)
 library(quanteda)
-library(pryr)
+# library(pryr)
 source('prediction.R')
-source('loaddata.R')
-source('corpusFunctions.R')
-source('modelBuilding.R')
+# source('loaddata.R')
+# source('corpusFunctions.R')
+# source('modelBuilding.R')
 
 
 # Define server logic required to draw a histogram
@@ -23,8 +23,8 @@ shinyServer(function(input, output, session) {
    
     flog.info("load NLP prediction model")
     flog.threshold(INFO)
-    # setwd("/Users/david/Coursera/assignments/dscapstone")
-    flog.trace(getwd())
+    # setwd("/Users/david/Coursera/assignments/dscapstone/NLP")
+    flog.info("working dir=%s",getwd())
     flog.trace("load 1")
     kbo1 <- readRDS("data/model/modelKBO1.rds")
     flog.trace("load 2")
@@ -37,7 +37,11 @@ shinyServer(function(input, output, session) {
     
     gtTables <<- readGTTables()
     gtTablesK <<- 5
+    
     filterStopwords = FALSE
+    predStopwords <<- readRDS("data/model/stopwords.rds")
+    predFilterStopwords <<- filterStopwords
+    
     text <- ""
     flog.info("load NLP prediction model - completed")
     

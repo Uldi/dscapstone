@@ -406,19 +406,25 @@ getGoodTouringTable <- function(k=5, kboTable) {
     gttable
 }
 
-prepareShinyModel <- function(kbo) {
+prepareShinyModel <- function(kbo, filterStopwords=FALSE) {
     gtTables <- getGoodTouringTables(5, kbo)
-    saveGTTables(gtTables, "data/deployment/gtTables.rds")
+    saveGTTables(gtTables, "NLP/data/model/gtTables.rds")
     
     kbo1 <- kbo[[1]]
     kbo2 <- kbo[[2]]
     #only filter 4/3grams to reduce model to 4grams seen more than once
     kbo3 <- kbo[[3]] %>% filter(count > 1)
     kbo4 <- kbo[[4]] %>% filter(count > 1)
-    saveRDS(kbo1, "data/deployment/modelKBO1.rds")
-    saveRDS(kbo2, "data/deployment/modelKBO2.rds")
-    saveRDS(kbo3, "data/deployment/modelKBO3.rds")
-    saveRDS(kbo4, "data/deployment/modelKBO4.rds")
+    saveRDS(kbo1, "NLP/data/model/modelKBO1.rds")
+    saveRDS(kbo2, "NLP/data/model/modelKBO2.rds")
+    saveRDS(kbo3, "NLP/data/model/modelKBO3.rds")
+    saveRDS(kbo4, "NLP/data/model/modelKBO4.rds")
+    
+    sw <- myStopwords(filterStopwords)
+    saveRDS(sw, "NLP/data/model/stopwords.rds")
+    
+    #copy needed R Files
+    file.copy("prediction.R", "NLP/prediction.R", overwrite = TRUE)
 }
 
 

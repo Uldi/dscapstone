@@ -112,7 +112,7 @@ getNextWordPredictionTable <- function(ngramKBOTables, text, k=5, alpha=0.2, use
     words <- c()
     if (!is.na(text) && (nchar(trimws(text)) > 0)) {
         
-        words <- removeStopwords(text, filterStopwords = filterStopwords)
+        words <- predictionRemoveStopwords(text, filterStopwords = filterStopwords)
         flog.trace("getNextWordPredictionTable - text after removing stopwords: %s", paste(words, collapse = " "))
     }
     
@@ -200,7 +200,7 @@ get4GramTestPredictionTable <- function(ngramKBOTables, testSentence, k=5, alpha
         gtTablesK <<- k 
     }
     
-    words <- removeStopwords(testSentence, filterStopwords)
+    words <- predictionRemoveStopwords(testSentence, filterStopwords)
     ngramWord <- words[length(words)]
     numWords <- length(words)
     
@@ -367,6 +367,25 @@ get4GramTestPredictionTable <- function(ngramKBOTables, testSentence, k=5, alpha
 #####
 # helper functions
 #####
+
+predictionRemoveStopwords <- function(sentence, filterStopwords=TRUE) {
+    
+    #Hack to speed up prediction
+    if (!("predStopwords" %in% ls(.GlobalEnv))) {
+        predStopwords <<- myStopwords(filterStopwords)
+        predFilterStopwords <<- filterStopwords
+    }
+    if (predFilterStopwords != filterStopwords) {
+        predStopwords <<- myStopwords(filterStopwords)
+        predFilterStopwords <<- filterStopwords
+    }
+    
+ 
+    tok <- tokens(sentence, remove_numbers=TRUE, remove_punct=TRUE, remove_symbols=TRUE, remove_hyphens=FALSE, remove_twitter=TRUE, remove_url=TRUE)
+    tok <- tokens_tolower(tok, keep_acronyms = TRUE)
+    tok <- tokens_remove(tok, predStopwords)
+    as.character(tok)
+}
 
 lookupNGram <- function(kboTable, ngram) {
     rows <- kboTable %>% filter(ngram_1 == ngram) %>% arrange(desc(mle))

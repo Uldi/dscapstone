@@ -40,10 +40,69 @@ flog.trace("primSetupNLP: getDocFeatureMatrix 1")
     10      16'920      120'849     604'260     105'101    
     25      2'989       29'181      201'577     63'028
     
-    
-evaluateNLPModel(kbo, "test10000.rds",1000, alpha=0.2)
-evaluateNLPModel(kbo, "test10000.rds",1000, alpha=0.3)
-evaluateNLPModel(kbo, "test10000.rds",1000, alpha=0.4)
+
+rm(gtTables)
+n <- 500
+filterStopwords <- FALSE
+testFile <- "testNoPW"
+evaluateNLPModel2(kbo, testFile,n, alpha=0.2, filterStopwords)
+evaluateNLPModel2(kbo, testFile,n, alpha=0.4, filterStopwords)
+evaluateNLPModel2(kbo, testFile,n, alpha=0.6, filterStopwords)
+evaluateNLPModel2(kbo, testFile,n, alpha=0.8, filterStopwords)
+
+> n <- 500
+> evaluateNLPModel(kbo, "test10000.rds",n, alpha=0.2)
+
+Don't Filter Stopwords
+> n <- 500
+> filterStopwords <- FALSE
+> testFile <- "testNoPW"
+> evaluateNLPModel2(kbo, testFile,n, alpha=0.2, filterStopwords)
+INFO [2019-06-10 14:57:26] evaluateNLPModel - start, numTests=500, alpha=0.200000, filterStopwords=FALSE
+INFO [2019-06-10 15:24:39] evaluateNLPModel - sumSuc=84, sumMLE=18.102577
+> evaluateNLPModel2(kbo, testFile,n, alpha=0.4, filterStopwords)
+INFO [2019-06-10 15:24:39] evaluateNLPModel - start, numTests=500, alpha=0.400000, filterStopwords=FALSE
+INFO [2019-06-10 15:51:23] evaluateNLPModel - sumSuc=84, sumMLE=20.114890
+> evaluateNLPModel2(kbo, testFile,n, alpha=0.6, filterStopwords)
+INFO [2019-06-10 15:51:23] evaluateNLPModel - start, numTests=500, alpha=0.600000, filterStopwords=FALSE
+INFO [2019-06-10 16:18:41] evaluateNLPModel - sumSuc=82, sumMLE=22.318840
+> evaluateNLPModel2(kbo, testFile,n, alpha=0.8, filterStopwords)
+INFO [2019-06-10 16:18:41] evaluateNLPModel - start, numTests=500, alpha=0.800000, filterStopwords=FALSE
+INFO [2019-06-10 16:45:08] evaluateNLPModel - sumSuc=80, sumMLE=24.719521
+
+Don't Filter Stopwords, TrainNoPW2F
+> n <- 500
+> filterStopwords <- FALSE
+> testFile <- "testNoPW"
+> evaluateNLPModel2(kbo, testFile,n, alpha=0.2, filterStopwords)
+INFO [2019-06-10 18:10:01] evaluateNLPModel - start, numTests=500, alpha=0.200000, filterStopwords=FALSE
+INFO [2019-06-10 18:14:51] evaluateNLPModel - sumSuc=74, sumMLE=NaN
+> evaluateNLPModel2(kbo, testFile,n, alpha=0.4, filterStopwords)
+INFO [2019-06-10 18:14:51] evaluateNLPModel - start, numTests=500, alpha=0.400000, filterStopwords=FALSE
+INFO [2019-06-10 18:19:05] evaluateNLPModel - sumSuc=74, sumMLE=NaN
+> evaluateNLPModel2(kbo, testFile,n, alpha=0.6, filterStopwords)
+INFO [2019-06-10 18:19:05] evaluateNLPModel - start, numTests=500, alpha=0.600000, filterStopwords=FALSE
+INFO [2019-06-10 18:24:28] evaluateNLPModel - sumSuc=72, sumMLE=NaN
+> evaluateNLPModel2(kbo, testFile,n, alpha=0.8, filterStopwords)
+INFO [2019-06-10 18:24:28] evaluateNLPModel - start, numTests=500, alpha=0.800000, filterStopwords=FALSE
+INFO [2019-06-10 18:28:30] evaluateNLPModel - sumSuc=72, sumMLE=NaN
+
+Filter Stopwords
+> n <- 500
+> filterStopwords <- TRUE
+> testFile <- "testNoPW"
+> evaluateNLPModel2(kbo, testFile,n, alpha=0.2, filterStopwords)
+INFO [2019-06-10 13:09:13] evaluateNLPModel - start, numTests=500, alpha=0.200000, filterStopwords=TRUE
+INFO [2019-06-10 13:34:26] evaluateNLPModel - sumSuc=34, sumMLE=2.948092
+> evaluateNLPModel2(kbo, testFile,n, alpha=0.4, filterStopwords)
+INFO [2019-06-10 13:34:26] evaluateNLPModel - start, numTests=500, alpha=0.400000, filterStopwords=TRUE
+INFO [2019-06-10 13:59:40] evaluateNLPModel - sumSuc=34, sumMLE=3.985426
+> evaluateNLPModel2(kbo, testFile,n, alpha=0.6, filterStopwords)
+INFO [2019-06-10 13:59:40] evaluateNLPModel - start, numTests=500, alpha=0.600000, filterStopwords=TRUE
+INFO [2019-06-10 14:24:33] evaluateNLPModel - sumSuc=35, sumMLE=5.305380
+> evaluateNLPModel2(kbo, testFile,n, alpha=0.8, filterStopwords)
+INFO [2019-06-10 14:28:45] evaluateNLPModel - start, numTests=500, alpha=0.800000, filterStopwords=TRUE
+INFO [2019-06-10 14:53:22] evaluateNLPModel - sumSuc=35, sumMLE=6.899522
     
     
     
